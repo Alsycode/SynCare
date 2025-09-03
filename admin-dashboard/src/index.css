@@ -1,0 +1,130 @@
+@import "tailwindcss";
+
+/* Define theme-specific variables */
+:root {
+  --bg-primary: #f3f4f6; /* Light mode background */
+  --bg-secondary: #f9fafb; /* Light mode secondary, slightly off-white */
+  --text-primary: #1f2937; /* Light mode text */
+  --text-secondary: #6b7280; /* Light mode secondary text */
+  --accent-color: #14b8a6; /* Teal for buttons, etc. */
+  --border-color: #e5e7eb; /* Light mode borders */
+  --card-bg: #ffffff; /* Light mode card background */
+  --shadow-color: rgba(0, 0, 0, 0.1); /* Light mode shadow */
+  --status-green: #22c55e; /* Status green */
+  --status-yellow: #eab308; /* Status yellow */
+  --status-blue: #3b82f6; /* Status blue */
+  --status-red: #ef4444; /* Status red for errors */
+  --sidebar-bg: #000000; /* Sidebar background for light mode */
+  --icon-color: #1f2937; /* Icon color for light mode */
+}
+
+.dark {
+  --bg-primary: #1f2937; /* Dark mode background */
+  --bg-secondary: #374151; /* Dark mode secondary */
+  --text-primary: #f9fafb; /* Dark mode text */
+  --text-secondary: #9ca3af; /* Dark mode secondary text */
+  --accent-color: #2dd4bf; /* Teal for buttons, etc. */
+  --border-color: #4b5563; /* Dark mode borders */
+  --card-bg: #374151; /* Dark mode card background */
+  --shadow-color: rgba(0, 0, 0, 0.3); /* Dark mode shadow */
+  --status-green: #16a34a; /* Dark mode status green */
+  --status-yellow: #ca8a04; /* Dark mode status yellow */
+  --status-blue: #2563eb; /* Dark mode status blue */
+  --status-red: #dc2626; /* Dark mode status red */
+  --sidebar-bg: #1f2937; /* Sidebar background for dark mode */
+  --icon-color: #ffffff; /* Icon color for dark mode */
+}
+
+/* Custom classes using CSS variables */
+.bg-primary {
+  background-color: var(--bg-primary);
+}
+.bg-secondary {
+  background-color: var(--bg-secondary);
+}
+.text-primary {
+  color: var(--text-primary);
+}
+.text-secondary {
+  color: var(--text-secondary);
+}
+.border-primary {
+  border-color: var(--border-color);
+}
+.bg-accent {
+  background-color: var(--accent-color);
+}
+.bg-card {
+  background-color: var(--card-bg);
+}
+.shadow-card {
+  box-shadow: 0 4px 6px var(--shadow-color);
+}
+.bg-sidebar {
+  background-color: var(--sidebar-bg);
+}
+.bg-status-green {
+  background-color: var(--status-green);
+}
+.bg-status-yellow {
+  background-color: var(--status-yellow);
+}
+.bg-status-blue {
+  background-color: var(--status-blue);
+}
+.bg-status-red {
+  background-color: var(--status-red);
+}
+.text-icon {
+  color: var(--icon-color);
+}
+
+#root {
+  margin: 0 auto;
+  text-align: center;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+.card {
+  padding: 2em;
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 6px var(--shadow-color);
+  transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.read-the-docs {
+  color: var(--text-secondary);
+}
