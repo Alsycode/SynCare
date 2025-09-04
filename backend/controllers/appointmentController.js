@@ -5,7 +5,7 @@ const Feedback = require("../models/Feedback");
 const nodemailer = require('nodemailer');
 const twilio = require('twilio');
 const jwt = require("jsonwebtoken");
-
+const Instruction = require("../models/Instructions")
 const twilioClient = twilio(process.env.TWILIO_SID, process.env.TWILIO_AUTH_TOKEN);
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -76,32 +76,45 @@ exports.confirmAppointment = async (req, res) => {
 
 // Complete Appointment by Doctor
 exports.completeAppointment = async (req, res) => {
+  console.log("request reached")
   try {
-    const { doctorNotes, diagnosis, treatmentPlan, vitalSigns, progressStatus } = req.body;
+    const { doctorNotes, diagnosis, treatmentPlan, vitalSigns, progressStatus, instructions, isOngoing } = req.body;
     const appointment = await Appointment.findOne({ _id: req.params.id, doctorId: req.user.id });
     if (!appointment) {
-      return res.status(404).json({ error: 'Appointment not found or not authorized' });
+      return res.status(404).json({ error: "Appointment not found or not authorized" });
     }
 
-    appointment.status = 'completed';
+    appointment.status = "completed";
     appointment.doctorNotes = doctorNotes || appointment.doctorNotes;
     appointment.diagnosis = diagnosis || appointment.diagnosis;
     appointment.treatmentPlan = treatmentPlan || appointment.treatmentPlan;
     appointment.vitalSigns = vitalSigns || appointment.vitalSigns;
     appointment.progressStatus = progressStatus || appointment.progressStatus;
     await appointment.save();
-
+console.log("saved appointment")
+    // Create instruction record for doctor
+    if (instructions) {
+      await Instruction.create({
+        appointmentId: appointment._id,
+        text: instructions,
+        role: "doctor",
+        createdBy: req.user.id,
+        isOngoing: isOngoing || false,
+      });
+    }
+console.log("no instructions")
     // Update MedicalHistory
     let medicalHistory = await MedicalHistory.findOne({ patientId: appointment.patientId });
     if (!medicalHistory) {
       medicalHistory = await MedicalHistory.create({ patientId: appointment.patientId, entries: [] });
     }
     const entries = [];
-    if (doctorNotes) entries.push({ type: 'note', details: doctorNotes, appointmentId: appointment._id, addedBy: req.user.id });
-    if (diagnosis) entries.push({ type: 'diagnosis', details: diagnosis, appointmentId: appointment._id, addedBy: req.user.id });
-    if (treatmentPlan) entries.push({ type: 'treatment', details: treatmentPlan, appointmentId: appointment._id, addedBy: req.user.id });
-    if (vitalSigns) entries.push({ type: 'vitals', details: JSON.stringify(vitalSigns), appointmentId: appointment._id, addedBy: req.user.id });
-    if (progressStatus) entries.push({ type: 'progress', details: progressStatus, appointmentId: appointment._id, addedBy: req.user.id });
+    if (doctorNotes) entries.push({ type: "note", details: doctorNotes, appointmentId: appointment._id, addedBy: req.user.id });
+    if (diagnosis) entries.push({ type: "diagnosis", details: diagnosis, appointmentId: appointment._id, addedBy: req.user.id });
+    if (treatmentPlan) entries.push({ type: "treatment", details: treatmentPlan, appointmentId: appointment._id, addedBy: req.user.id });
+    if (vitalSigns) entries.push({ type: "vitals", details: JSON.stringify(vitalSigns), appointmentId: appointment._id, addedBy: req.user.id });
+    if (progressStatus) entries.push({ type: "progress", details: progressStatus, appointmentId: appointment._id, addedBy: req.user.id });
+    if (instructions) entries.push({ type: "instruction", details: instructions, appointmentId: appointment._id, addedBy: req.user.id });
     await MedicalHistory.findOneAndUpdate(
       { patientId: appointment.patientId },
       { $push: { entries: { $each: entries } } },
@@ -110,21 +123,24 @@ exports.completeAppointment = async (req, res) => {
 
     // Feedback email logic
     const patient = await User.findById(appointment.patientId);
-    const token = jwt.sign({
-      appointmentId: appointment._id,
-      patientId: patient._id,
-      exp: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60
-    }, process.env.JWT_SECRET);
+    const token = jwt.sign(
+      {
+        appointmentId: appointment._id,
+        patientId: patient._id,
+        exp: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60,
+      },
+      process.env.JWT_SECRET
+    );
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
       to: patient.email,
-      subject: 'Appointment Completed - Share Feedback',
+      subject: "Appointment Completed - Share Feedback",
       html: `Dear ${patient.name},<br>Your appointment on ${appointment.date.toLocaleDateString()} at ${appointment.time} is complete. Please provide feedback: <a href="http://localhost:5174/feedback/${appointment._id}?token=${token}">Feedback Form</a>`,
     });
 
-    res.json({ message: 'Appointment completed', appointment });
+    res.json({ message: "Appointment completed", appointment });
   } catch (error) {
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: "Server error" });
   }
 };
 

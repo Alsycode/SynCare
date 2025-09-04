@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import { ThemeContext } from "../context/ThemeContext";
 import { fetchData } from "../axiosInstance/index";
 import { io } from "socket.io-client";
-
+import { FaCalendarAlt, FaClock, FaUser, FaNotesMedical } from "react-icons/fa";
+import { MdOutlineAssignment } from "react-icons/md";
 const socket = io("http://localhost:5000", { autoConnect: true, withCredentials: true });
 
 function DoctorDashboard() {
@@ -18,16 +19,28 @@ function DoctorDashboard() {
     treatmentPlan: "",
     vitalSigns: { bloodPressure: "", heartRate: "", temperature: "" },
     progressStatus: "unknown",
+    instructions: "",
+    isOngoing: false,
   });
   const { theme } = useContext(ThemeContext);
 
   useEffect(() => {
     async function loadInitialData() {
       try {
+        setIsLoading(true);
         const appts = await fetchData("/api/appointments/doctor");
-        setAppointments(appts);
         const userId = localStorage.getItem("userId");
         const unread = await fetchData(`/api/chat/unread-counts/${userId}`);
+
+        // Fetch instructions for each appointment
+        const appointmentsWithInstructions = await Promise.all(
+          appts.map(async (appt) => {
+            const instructions = await fetchData(`/api/instructions/appointment/${appt._id}`);
+            return { ...appt, instructions: instructions || [] };
+          })
+        );
+
+        setAppointments(appointmentsWithInstructions);
         setUnreadCounts(unread);
       } catch (err) {
         setError(err.message || "Failed to load data");
@@ -55,10 +68,7 @@ function DoctorDashboard() {
 
   const handleConfirm = async (id) => {
     try {
-      await fetchData(`/api/appointments/confirm/${id}`, {
-        method: "PUT",
-        data: {},
-      });
+      await fetchData(`/api/appointments/confirm/${id}`, { method: "PUT", data: {} });
       setAppointments((prev) =>
         prev.map((a) => (a._id === id ? { ...a, status: "confirmed" } : a))
       );
@@ -70,13 +80,23 @@ function DoctorDashboard() {
 
   const handleComplete = async (id) => {
     try {
-      await fetchData(`/api/appointments/complete/${id}`, {
+      const response = await fetchData(`/api/appointments/complete/${id}`, {
         method: "PUT",
-        data: formData,
+        data: {
+          doctorNotes: formData.doctorNotes,
+          diagnosis: formData.diagnosis,
+          treatmentPlan: formData.treatmentPlan,
+          vitalSigns: formData.vitalSigns,
+          progressStatus: formData.progressStatus,
+          instructions: formData.instructions,
+          isOngoing: formData.isOngoing,
+        },
       });
       setAppointments((prev) =>
         prev.map((a) =>
-          a._id === id ? { ...a, status: "completed", ...formData } : a
+          a._id === id
+            ? { ...a, status: "completed", ...formData, instructions: [{ text: formData.instructions, isOngoing: formData.isOngoing }] }
+            : a
         )
       );
       setSelectedAppointment(null);
@@ -86,9 +106,11 @@ function DoctorDashboard() {
         treatmentPlan: "",
         vitalSigns: { bloodPressure: "", heartRate: "", temperature: "" },
         progressStatus: "unknown",
+        instructions: "",
+        isOngoing: false,
       });
       socket.emit("appointmentCompleted", { appointmentId: id });
-    } catch {
+    } catch (err) {
       setError("Failed to complete appointment");
     }
   };
@@ -99,12 +121,10 @@ function DoctorDashboard() {
       doctorNotes: appointment.doctorNotes || "",
       diagnosis: appointment.diagnosis || "",
       treatmentPlan: appointment.treatmentPlan || "",
-      vitalSigns: appointment.vitalSigns || {
-        bloodPressure: "",
-        heartRate: "",
-        temperature: "",
-      },
+      vitalSigns: appointment.vitalSigns || { bloodPressure: "", heartRate: "", temperature: "" },
       progressStatus: appointment.progressStatus || "unknown",
+      instructions: appointment.instructions.length > 0 ? appointment.instructions[0].text : "",
+      isOngoing: appointment.instructions.length > 0 ? appointment.instructions[0].isOngoing : false,
     });
   };
 
@@ -154,83 +174,93 @@ function DoctorDashboard() {
           <p className="text-secondary">No appointments found</p>
         ) : (
           <div className="flex flex-col gap-2 sm:gap-3">
-            {appointments.map((appt) => (
-              <div
-                key={appt._id}
-                className="p-3 sm:p-5 rounded-xl bg-card border border-primary shadow-card hover:scale-[1.02] transition-all duration-300 text-primary"
-              >
-                <p className="mb-1">
-                  <span className="font-semibold text-accent">Date:</span>{" "}
-                  {new Date(appt.date).toLocaleDateString()}
-                </p>
-                <p className="mb-1">
-                  <span className="font-semibold text-accent">Time:</span> {appt.time}
-                </p>
-                <p className="mb-1">
-                  <span className="font-semibold text-accent">Patient:</span>{" "}
-                  {appt.patientId?.name || "N/A"}
-                </p>
-                <p className="mb-1">
-                  <span className="font-semibold text-accent">Patient ID:</span>{" "}
-                  {appt.patientId?._id || "N/A"}
-                </p>
-                <p className="mb-4">
-                  <span className="font-semibold text-accent">Status:</span>{" "}
-                  <span
-                    className={`px-3 py-1 rounded-full text-sm font-semibold bg-opacity-70 ${
-                      appt.status === "confirmed"
-                        ? "bg-status-green"
-                        : appt.status === "completed"
-                        ? "bg-status-blue"
-                        : "bg-status-yellow"
-                    } text-white`}
-                  >
-                    {appt.status}
-                  </span>
-                </p>
-                <div className="flex flex-wrap gap-2 sm:gap-3">
-                  {appt.status === "pending" && (
-                    <button
-                      onClick={() => handleConfirm(appt._id)}
-                      className="bg-status-green text-white px-4 py-2 rounded-lg hover:bg-opacity-90 transition-all duration-300"
-                    >
-                      Confirm
-                    </button>
-                  )}
-                  {appt.status === "confirmed" && (
-                    <button
-                      onClick={() => openCompleteForm(appt)}
-                      className="bg-status-blue text-white px-4 py-2 rounded-lg hover:bg-opacity-90 transition-all duration-300"
-                    >
-                      Complete
-                    </button>
-                  )}
-                  <Link
-                    to={`/video-call/${appt._id}`}
-                    className="inline-block bg-black text-white px-4 py-2 rounded-lg hover:bg-opacity-90 transition-all duration-300"
-                  >
-                    Video Call
-                  </Link>
-                  <Link
-                    to={`/doctor-dashboard/chat/${appt.patientId?._id}`}
-                    className="inline-block bg-accent text-white px-4 py-2 rounded-lg hover:bg-opacity-90 transition-all duration-300"
-                  >
-                    Chat with Patient{" "}
-                    {unreadCounts[appt.patientId?._id] ? (
-                      <span className="ml-2 bg-status-red text-white rounded-full px-2 py-1 text-xs">
-                        {unreadCounts[appt.patientId?._id]}
-                      </span>
-                    ) : null}
-                  </Link>
-                </div>
-              </div>
-            ))}
+       {appointments.map((appt) => (
+  <div
+    key={appt._id}
+    className="p-5 rounded-xl bg-card border border-primary shadow-card hover:scale-[1.02] transition-all duration-300 text-primary"
+  >
+    <div className="flex justify-between items-start mb-4">
+      <h4 className="text-lg font-semibold flex items-center gap-2">
+        <FaUser className="text-accent" />
+        {appt.patientId?.name || "N/A"}
+      </h4>
+      <span
+        className={`px-3 py-1 rounded-full text-sm font-semibold bg-opacity-70 ${
+          appt.status === "confirmed"
+            ? "bg-status-green"
+            : appt.status === "completed"
+            ? "bg-status-blue"
+            : "bg-status-yellow"
+        } text-white`}
+      >
+        {appt.status}
+      </span>
+    </div>
+
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+      <p className="flex items-center gap-2">
+        <FaCalendarAlt className="text-accent" />
+        {new Date(appt.date).toLocaleDateString()}
+      </p>
+      <p className="flex items-center gap-2">
+        <FaClock className="text-accent" />
+        {appt.time}
+      </p>
+      <p className="flex items-center gap-2 col-span-1 sm:col-span-2">
+        <FaNotesMedical className="text-accent" />
+        {appt.instructions.length > 0
+          ? appt.instructions[0].text
+          : "No instructions"}
+        {appt.instructions.length > 0 && appt.instructions[0].isOngoing && (
+          <span className="ml-2 text-status-yellow font-semibold">(Ongoing)</span>
+        )}
+      </p>
+    </div>
+
+    <div className="flex flex-wrap gap-3">
+      {appt.status === "pending" && (
+        <button
+          onClick={() => handleConfirm(appt._id)}
+          className="bg-status-green text-white px-4 py-2 rounded-lg hover:bg-opacity-90 transition-all duration-300"
+        >
+          Confirm
+        </button>
+      )}
+      {appt.status === "confirmed" && (
+        <button
+          onClick={() => openCompleteForm(appt)}
+          className="bg-status-blue text-white px-4 py-2 rounded-lg hover:bg-opacity-90 transition-all duration-300"
+        >
+          Complete
+        </button>
+      )}
+      <Link
+        to={`/video-call/${appt._id}`}
+        className="inline-flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg hover:bg-opacity-90 transition-all duration-300"
+      >
+        <MdOutlineAssignment />
+        Video Call
+      </Link>
+      <Link
+        to={`/doctor-dashboard/chat/${appt.patientId?._id}`}
+        className="inline-flex items-center gap-2 bg-accent text-white px-4 py-2 rounded-lg hover:bg-opacity-90 transition-all duration-300"
+      >
+        Chat with Patient
+        {unreadCounts[appt.patientId?._id] ? (
+          <span className="ml-2 bg-status-red text-white rounded-full px-2 py-1 text-xs">
+            {unreadCounts[appt.patientId?._id]}
+          </span>
+        ) : null}
+      </Link>
+    </div>
+  </div>
+))}
           </div>
         )}
 
         {selectedAppointment && (
-          <div className="fixed inset-0 bg-black bg-opacity-10 flex items-center justify-center z-50">
-            <div className="bg-card p-4 sm:p-6 rounded-xl border border-primary text-primary w-full max-w-sm sm:max-w-md">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
+            <div className="bg-card p-4 sm:p-6 rounded-xl border border-primary text-primary max-h-[90vh] w-full max-w-md sm:max-w-lg overflow-y-auto">
               <h3 className="text-lg sm:text-xl font-semibold mb-4">
                 Complete Appointment
               </h3>
@@ -239,6 +269,7 @@ function DoctorDashboard() {
                   e.preventDefault();
                   handleComplete(selectedAppointment._id);
                 }}
+                className="space-y-4"
               >
                 <div className="mb-4">
                   <label className="block mb-1 text-primary">Doctor Notes</label>
@@ -247,7 +278,7 @@ function DoctorDashboard() {
                     onChange={(e) =>
                       setFormData({ ...formData, doctorNotes: e.target.value })
                     }
-                    className="w-full p-2 sm:p-3 rounded bg-secondary border border-primary text-primary placeholder-text-secondary focus:outline-none focus:border-accent"
+                    className="w-full p-2 sm:p-3 rounded bg-secondary border border-primary text-primary placeholder-text-secondary focus:outline-none focus:border-accent h-24 resize-y"
                     placeholder="Enter notes..."
                   />
                 </div>
@@ -269,7 +300,7 @@ function DoctorDashboard() {
                     onChange={(e) =>
                       setFormData({ ...formData, treatmentPlan: e.target.value })
                     }
-                    className="w-full p-2 sm:p-3 rounded bg-secondary border border-primary text-primary placeholder-text-secondary focus:outline-none focus:border-accent"
+                    className="w-full p-2 sm:p-3 rounded bg-secondary border border-primary text-primary placeholder-text-secondary focus:outline-none focus:border-accent h-24 resize-y"
                     placeholder="Enter treatment plan..."
                   />
                 </div>
@@ -281,10 +312,7 @@ function DoctorDashboard() {
                       onChange={(e) =>
                         setFormData({
                           ...formData,
-                          vitalSigns: {
-                            ...formData.vitalSigns,
-                            bloodPressure: e.target.value,
-                          },
+                          vitalSigns: { ...formData.vitalSigns, bloodPressure: e.target.value },
                         })
                       }
                       className="p-2 sm:p-3 rounded bg-secondary border border-primary text-primary placeholder-text-secondary focus:outline-none focus:border-accent"
@@ -295,10 +323,7 @@ function DoctorDashboard() {
                       onChange={(e) =>
                         setFormData({
                           ...formData,
-                          vitalSigns: {
-                            ...formData.vitalSigns,
-                            heartRate: e.target.value,
-                          },
+                          vitalSigns: { ...formData.vitalSigns, heartRate: e.target.value },
                         })
                       }
                       className="p-2 sm:p-3 rounded bg-secondary border border-primary text-primary placeholder-text-secondary focus:outline-none focus:border-accent"
@@ -309,10 +334,7 @@ function DoctorDashboard() {
                       onChange={(e) =>
                         setFormData({
                           ...formData,
-                          vitalSigns: {
-                            ...formData.vitalSigns,
-                            temperature: e.target.value,
-                          },
+                          vitalSigns: { ...formData.vitalSigns, temperature: e.target.value },
                         })
                       }
                       className="p-2 sm:p-3 rounded bg-secondary border border-primary text-primary placeholder-text-secondary focus:outline-none focus:border-accent"
@@ -334,6 +356,29 @@ function DoctorDashboard() {
                     <option value="stable">Stable</option>
                     <option value="worsening">Worsening</option>
                   </select>
+                </div>
+                <div className="mb-4">
+                  <label className="block mb-1 text-primary">Instructions for Patient</label>
+                  <textarea
+                    value={formData.instructions}
+                    onChange={(e) =>
+                      setFormData({ ...formData, instructions: e.target.value })
+                    }
+                    className="w-full p-2 sm:p-3 rounded bg-secondary border border-primary text-primary placeholder-text-secondary focus:outline-none focus:border-accent h-24 resize-y"
+                    placeholder="e.g., Take 500mg Amoxicillin twice daily, Return in 1 week..."
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="block mb-1 text-primary">Ongoing Instruction?</label>
+                  <input
+                    type="checkbox"
+                    checked={formData.isOngoing}
+                    onChange={(e) =>
+                      setFormData({ ...formData, isOngoing: e.target.checked })
+                    }
+                    className="mr-2 leading-tight"
+                  />
+                  <span>Mark as ongoing (carries forward to future appointments)</span>
                 </div>
                 <div className="flex justify-end gap-2 sm:gap-3">
                   <button

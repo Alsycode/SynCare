@@ -11,6 +11,7 @@ const bloodBankRoutes = require('./routes/bloodBank');
 const adminRoutes = require('./routes/admins');
 const paymentRoutes = require("./routes/payments");
 const medicalHistoryRoutes = require("./routes/medicalHistory")
+const instructionRoutes = require("./routes/instructions")
 const Chat = require("./models/Chat");
 require('dotenv').config();
 
@@ -41,6 +42,7 @@ app.use('/api/blood-bank', bloodBankRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/admins', adminRoutes);
 app.use('/api/medicalHistory', medicalHistoryRoutes);
+app.use('/api/instructions', instructionRoutes);
 // Socket.IO connection handling
 io.on('connection', (socket) => {
   // console.log('New client connected:', socket.id);
