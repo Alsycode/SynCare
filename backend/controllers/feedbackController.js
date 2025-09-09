@@ -30,33 +30,34 @@ exports.submitFeedback = async (req, res) => {
 };
 
 // Get Feedback for an Appointment
-exports.getFeedbackByAppointment = async (req, res) => {
-  try {
-    const appointment = await Appointment.findById(req.params.appointmentId);
-    if (
-      !appointment ||
-      (req.user.role !== 'admin' &&
-        req.user.id !== appointment.patientId.toString() &&
-        req.user.id !== appointment.doctorId.toString())
-    ) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
-    const feedback = await Feedback.findOne({ appointmentId: req.params.appointmentId }).populate(
-      'patientId',
-      'name'
-    );
-    if (!feedback) {
-      return res.status(404).json({ error: 'Feedback not found' });
-    }
-    res.json(feedback);
-  } catch (error) {
-    res.status(500).json({ error: 'Server error' });
-  }
-};
+// exports.getFeedbackByAppointment = async (req, res) => {
+//   try {
+//     const appointment = await Appointment.findById(req.params.appointmentId);
+//     if (
+//       !appointment ||
+//       (req.user.role !== 'admin' &&
+//         req.user.id !== appointment.patientId.toString() &&
+//         req.user.id !== appointment.doctorId.toString())
+//     ) {
+//       return res.status(403).json({ error: 'Access denied' });
+//     }
+//     const feedback = await Feedback.findOne({ appointmentId: req.params.appointmentId }).populate(
+//       'patientId',
+//       'name'
+//     );
+//     if (!feedback) {
+//       return res.status(404).json({ error: 'Feedback not found' });
+//     }
+//     res.json(feedback);
+//   } catch (error) {
+//     res.status(500).json({ error: 'Server error' });
+//   }
+// };
 
 // Get All Feedback for Admin without Aggregation
 exports.getAllFeedback = async (req, res) => {
   try {
+    console.log("arrived")
     const feedbacks = await Feedback.find()
       .populate('patientId', 'name')
       .populate({
@@ -68,7 +69,7 @@ exports.getAllFeedback = async (req, res) => {
         select: 'date time',
       })
       .lean();
-
+console.log("feeeeeeeeeeeeeed",feedbacks)
     const formattedFeedbacks = feedbacks.map(feedback => ({
       _id: feedback._id,
       patientId: feedback.patientId ? feedback.patientId._id : null,

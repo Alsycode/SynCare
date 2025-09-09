@@ -1,48 +1,45 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
 import { useParams } from "react-router-dom";
 import { useSearchParams } from "react-router-dom";
+import { fetchData } from "../axiosInstance/index"; // Import your custom axios instance
+
 function FeedbackForm() {
   const { appointmentId } = useParams();
   const [formData, setFormData] = useState({ rating: 5, comments: "" });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isValid, setIsValid] = useState(false);
-const [searchParams] = useSearchParams();
-  const token = searchParams.get("token"); 
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get("token");
+
   useEffect(() => {
-   
     if (!token) {
       setError("Invalid feedback link: Token missing");
       return;
     }
 
     // Validate token with backend (simplified check)
-    axios
-      .get(`http://localhost:5000/api/appointments/validate/${appointmentId}`, {
+    fetchData.get(`/api/appointments/validate/${appointmentId}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((res) => {
-        console.log("res.data.valid",res.data.valid)
         if (res.data.valid) setIsValid(true);
         else setError("Invalid or expired feedback link");
       })
       .catch(() => setError("Failed to validate feedback link"));
-  }, [appointmentId]);
-console.log("isValid",isValid)
+  }, [appointmentId, token]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("clicked")
     if (!isValid) {
       setError("Please use a valid feedback link");
       return;
     }
     try {
-      await axios.post(
-        `http://localhost:5000/api/feedback`,
+      await fetchData.post(
+        `/api/feedback`,
         {
           appointmentId,
-          // patientId: localStorage.getItem("userId") || "anonymous",
           rating: formData.rating,
           comments: formData.comments,
         },
@@ -57,7 +54,8 @@ console.log("isValid",isValid)
     }
   };
 
-  if (!isValid && error) return <div className="text-red-500 text-center p-4">{error}</div>;
+  if (!isValid && error)
+    return <div className="text-red-500 text-center p-4">{error}</div>;
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8 py-12 bg-gray-100">
@@ -70,12 +68,16 @@ console.log("isValid",isValid)
             <label className="block mb-1">Rating (1-5)</label>
             <select
               value={formData.rating}
-              onChange={(e) => setFormData({ ...formData, rating: Number(e.target.value) })}
+              onChange={(e) =>
+                setFormData({ ...formData, rating: Number(e.target.value) })
+              }
               className="w-full p-2 border rounded"
               required
             >
               {[1, 2, 3, 4, 5].map((num) => (
-                <option key={num} value={num}>{num} Star{num > 1 ? "s" : ""}</option>
+                <option key={num} value={num}>
+                  {num} Star{num > 1 ? "s" : ""}
+                </option>
               ))}
             </select>
           </div>
@@ -83,7 +85,9 @@ console.log("isValid",isValid)
             <label className="block mb-1">Comments</label>
             <textarea
               value={formData.comments}
-              onChange={(e) => setFormData({ ...formData, comments: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, comments: e.target.value })
+              }
               className="w-full p-2 border rounded"
               placeholder="Share your thoughts..."
             />

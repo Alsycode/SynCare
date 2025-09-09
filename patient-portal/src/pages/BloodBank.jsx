@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import { fetchData } from "../axiosInstance/index.jsx"; // Adjust this path according to your project
 import { SlCalender } from "react-icons/sl";
-import { CiClock2 } from "react-icons/ci"; // optional if you want a timestamp icon
+import { CiClock2 } from "react-icons/ci"; // optional timestamp icon
 
 function BloodBank() {
   const [inventory, setInventory] = useState([]);
@@ -11,13 +11,8 @@ function BloodBank() {
   useEffect(() => {
     const fetchInventory = async () => {
       try {
-        const res = await axios.get(
-          "http://localhost:5000/api/blood-bank/availability",
-          {
-            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-          }
-        );
-        setInventory(res.data);
+        const data = await fetchData("/api/blood-bank/availability");
+        setInventory(data);
       } catch (err) {
         setError("Failed to fetch blood bank data");
       } finally {
@@ -46,10 +41,14 @@ function BloodBank() {
 
   // Choose color strip by blood group
   const getStripColor = (group) => {
-    if (["O+", "O-"].includes(group)) return "bg-gradient-to-b from-red-400 to-red-600";
-    if (["A+", "A-"].includes(group)) return "bg-gradient-to-b from-pink-400 to-pink-600";
-    if (["B+", "B-"].includes(group)) return "bg-gradient-to-b from-yellow-400 to-yellow-600";
-    if (["AB+", "AB-"].includes(group)) return "bg-gradient-to-b from-purple-400 to-purple-600";
+    if (["O+", "O-"].includes(group))
+      return "bg-gradient-to-b from-red-400 to-red-600";
+    if (["A+", "A-"].includes(group))
+      return "bg-gradient-to-b from-pink-400 to-pink-600";
+    if (["B+", "B-"].includes(group))
+      return "bg-gradient-to-b from-yellow-400 to-yellow-600";
+    if (["AB+", "AB-"].includes(group))
+      return "bg-gradient-to-b from-purple-400 to-purple-600";
     return "bg-gradient-to-b from-gray-400 to-gray-600";
   };
 

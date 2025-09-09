@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import io from "socket.io-client";
-import axios from "axios";
+import { fetchData } from "../axiosInstance/index.jsx"; // Adjust the import path accordingly
 import { IoSend } from "react-icons/io5"; // icon for send button
 
 const socket = io("http://localhost:5000", { withCredentials: true });
@@ -24,30 +24,18 @@ function Chat() {
 
     const fetchHistory = async () => {
       try {
-        const res = await axios.get(
-          `http://localhost:5000/api/chat/history/${doctorId}`,
-          {
-            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-          }
-        );
-        setMessages(res.data);
-        console.log("Chat history fetched:", res.data);
+        const data = await fetchData(`/api/chat/history/${doctorId}`);
+        setMessages(data);
+        console.log("Chat history fetched:", data);
       } catch (err) {
         setError("Failed to fetch chat history");
         console.error("Error fetching chat history:", err);
       }
     };
 
-    // Mark doctor messages as read
     const markMessagesRead = async () => {
       try {
-        await axios.post(
-          `http://localhost:5000/api/chat/mark-read/${userId}`,
-          null,
-          {
-            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-          }
-        );
+        await fetchData(`/api/chat/mark-read/${userId}`, { method: "POST" });
         console.log(`Messages marked as read for patientId: ${userId}`);
       } catch (err) {
         console.error("Failed to mark messages read:", err);
@@ -90,13 +78,10 @@ function Chat() {
         console.log("Message sent via Socket.IO:", message);
 
         // Fallback: Send via HTTP to ensure message is saved
-        await axios.post(
-          "http://localhost:5000/api/chat/send",
-          message,
-          {
-            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-          }
-        );
+        await fetchData("/api/chat/send", {
+          method: "POST",
+          data: message,
+        });
         console.log("Message sent via HTTP:", message);
       } catch (error) {
         console.error("Error sending message:", error);

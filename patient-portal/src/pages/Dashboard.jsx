@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import { fetchData } from "../axiosInstance/index.jsx"; // Update this path as per your file structure
 import { Link, useLocation } from "react-router-dom";
 import { CiClock2 } from "react-icons/ci";
 import { SlCalender } from "react-icons/sl";
@@ -8,9 +8,11 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import io from "socket.io-client";
 
+// Initialize socket.io client
 const socket = io("http://localhost:5000", { withCredentials: true });
 
 function Dashboard() {
+  console.log("fetchDataIsworkin",)
   const [appointments, setAppointments] = useState([]);
   const [unreadCounts, setUnreadCounts] = useState({});
   const [error, setError] = useState("");
@@ -24,14 +26,9 @@ function Dashboard() {
 
     const fetchAppointments = async () => {
       try {
-        const res = await axios.get(
-          "http://localhost:5000/api/appointments/patient",
-          {
-            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-          }
-        );
-        console.log("Appointments fetched:", res.data);
-        setAppointments(res.data);
+        const data = await fetchData("/api/appointments/patient");
+        console.log("Appointments fetched:", data);
+        setAppointments(data);
       } catch (err) {
         console.error("Failed to fetch appointments:", err);
         setError("Failed to fetch appointments");
@@ -41,42 +38,41 @@ function Dashboard() {
     const fetchUnreadCounts = async () => {
       try {
         console.log("Fetching unread counts for patientId:", userId);
-        const res = await axios.get(
-          `http://localhost:5000/api/chat/unread-counts-patient/${userId}`,
-          {
-            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-          }
-        );
-        console.log("Unread counts fetched:", res.data);
-        setUnreadCounts(res.data);
+        const data = await fetchData(`/api/chat/unread-counts-patient/${userId}`);
+        console.log("Unread counts fetched:", data);
+        setUnreadCounts(data);
       } catch (error) {
-        console.error("Failed to fetch unread counts:", error.response?.status, error.response?.data);
-        setError(`Failed to fetch unread message counts: ${error.response?.data?.message || error.message}`);
+        console.error(
+          "Failed to fetch unread counts:",
+          error.response?.status,
+          error.response?.data
+        );
+        setError(
+          `Failed to fetch unread message counts: ${
+            error.response?.data?.message || error.message
+          }`
+        );
       }
     };
 
-    const fetchData = async () => {
+    const fetchAll = async () => {
       await Promise.all([fetchAppointments(), fetchUnreadCounts()]);
       setIsLoading(false);
     };
 
-    fetchData();
+    fetchAll();
 
     socket.on("newMessage", (message) => {
       console.log("New message received:", message);
       if (message.sender === "doctor" && location.pathname === "/dashboard") {
         const doctorId = message.doctorId;
-        // Check if doctor name is available in appointments
         const doctor = appointments.find((appt) => appt.doctorId._id === doctorId);
         let doctorName = doctor?.doctorId.name || "Doctor";
 
-        // Fallback to API if name not found
         if (!doctorName || doctorName === "Doctor") {
-          axios.get(`http://localhost:5000/api/doctors/${doctorId}`, {
-            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-          })
+          fetchData(`/api/doctors/${doctorId}`)
             .then((res) => {
-              doctorName = res.data.name || "Doctor";
+              doctorName = res.name || "Doctor";
               showNotification(doctorName, message.message);
             })
             .catch((err) => {
@@ -87,7 +83,6 @@ function Dashboard() {
           showNotification(doctorName, message.message);
         }
 
-        // Update unread counts
         setUnreadCounts((prev) => ({
           ...prev,
           [doctorId]: (prev[doctorId] || 0) + 1,

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { fetchData } from '../axiosInstance/index.jsx'; // Import your custom Axios instance
 
 function Login({ setToken }) {
   const [email, setEmail] = useState('');
@@ -9,29 +9,35 @@ function Login({ setToken }) {
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const res = await axios.post('http://localhost:5000/api/auth/login', { email, password });
-      localStorage.setItem('token', res.data.token);
-      localStorage.setItem('userId', res.data.id);
-      setToken(res.data.token);
-      navigate('/dashboard');
-    } catch (err) {
-      setError('Invalid credentials');
-    }
-  };
+  e.preventDefault();
+  console.log("Form submitted with email:", email, "password:", password);
+  try {
+    const res = await fetchData('/api/auth/login', {
+      method: 'POST',
+      data: { email, password },
+    });
+    console.log("Response token:", res.token);
+    localStorage.setItem('token', res.token);
+    localStorage.setItem('userId', res.id);
+    setToken(res.token);
+    navigate('/dashboard');
+  } catch (err) {
+    console.error("Error in handleSubmit:", err);
+    setError('Invalid credentials');
+  }
+};
+
 
   return (
     <div
       className="min-h-screen flex"
       style={{
-        backgroundImage: "url('/back.jpg')", // change to your image path
+        backgroundImage: "url('/back.jpg')",
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       }}
     >
-      {/* Left side with transparent overlay & centered logo */}
-       <div className="flex w-full md:w-1/2 items-center justify-center px-6 py-12">
+      <div className="flex w-full md:w-1/2 items-center justify-center px-6 py-12">
         <div className="w-full max-w-md bg-white/80 backdrop-blur-md rounded-3xl shadow-2xl p-8 sm:p-10">
           <h2 className="text-3xl font-bold mb-6 text-center text-gray-800">
             Patient Login
@@ -82,9 +88,6 @@ function Login({ setToken }) {
           className="max-w-xs md:max-w-sm lg:max-w-md"
         />
       </div>
-
-      {/* Right side with semi-transparent white form card */}
-     
     </div>
   );
 }
