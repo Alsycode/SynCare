@@ -5,7 +5,7 @@ import { fetchData } from "../axiosInstance/index";
 import { io } from "socket.io-client";
 import { FaCalendarAlt, FaClock, FaUser, FaNotesMedical } from "react-icons/fa";
 import { MdOutlineAssignment } from "react-icons/md";
-const socket = io("http://localhost:5000", { autoConnect: true, withCredentials: true });
+const socket = io("https://syncare.onrender.com/", { autoConnect: true, withCredentials: true });
 
 function DoctorDashboard() {
   const [appointments, setAppointments] = useState([]);
