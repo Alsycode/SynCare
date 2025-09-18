@@ -43,6 +43,10 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/admins', adminRoutes);
 app.use('/api/medicalHistory', medicalHistoryRoutes);
 app.use('/api/instructions', instructionRoutes);
+app.get('/', (req, res) => {
+  res.send('Server is live');
+});
+
 // Socket.IO connection handling
 io.on('connection', (socket) => {
   // console.log('New client connected:', socket.id);
