@@ -21,7 +21,7 @@ const socketIo = require('socket.io');
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
-    origin: ["http://localhost:5174", "http://localhost:5173"],
+    origin: ["https://caresync-patient-portal.vercel.app", "https://syn-care.vercel.app"],
     methods: ["GET", "POST"],
     credentials: true
   }
