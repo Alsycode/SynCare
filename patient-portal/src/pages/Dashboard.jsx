@@ -7,7 +7,7 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import io from "socket.io-client";
 
-const socket = io("http://localhost:5000", { withCredentials: true });
+const socket = io("https://syncare.onrender.com/", { withCredentials: true });
 
 function Dashboard() {
   const [appointments, setAppointments] = useState([]);
