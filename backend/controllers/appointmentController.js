@@ -11,6 +11,20 @@ const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
 });
+function generateHalfHourSlots(startTime, endTime) {
+  const slots = [];
+  let [hours, minutes] = startTime.split(":").map(Number);
+  const [endHours, endMinutes] = endTime.split(":").map(Number);
+  while (hours < endHours || (hours === endHours && minutes < endMinutes)) {
+    slots.push(`${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`);
+    minutes += 30;
+    if (minutes >= 60) {
+      hours += 1;
+      minutes = 0;
+    }
+  }
+  return slots;
+}
 
 // Appointment Creation by Admin
 exports.createAppointmentAdmin = async (req, res) => {
@@ -185,16 +199,57 @@ exports.getAllAppointmentsAdmin = async (req, res) => {
 // Validate appointment token
 exports.validateAppointmentToken = async (req, res) => {
   const { appointmentId } = req.params;
+  console.log("params",appointmentId)
   const token = req.headers.authorization?.split(' ')[1];
   try {
     const appointment = await Appointment.findById(appointmentId);
     if (!appointment || appointment.status !== 'completed') {
       return res.status(400).json({ valid: false, error: 'Invalid appointment' });
     }
+    
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const isValid = decoded.appointmentId === appointmentId && decoded.exp > Date.now() / 1000;
+ const isValid = appointment.patientId.equals(decoded.id);
+      console.log("decoded",decoded)
+    console.log("decoded patientid",appointment.patientId)
+        console.log("isValid",isValid)
     res.json({ valid: isValid });
   } catch (error) {
     res.status(500).json({ valid: false, error: 'Server error' });
   }
 };
+
+
+exports.getAvailableSlots = async (req, res) => {
+  const { doctorId, date } = req.query;
+  if (!doctorId || !date) {
+    return res.status(400).json({ error: "doctorId and date are required" });
+  }
+  try {
+    const doctor = await User.findById(doctorId);
+    if (!doctor) {
+      return res.status(404).json({ error: "Doctor not found" });
+    }
+    // Get the weekday of the date
+    const weekday = new Date(date).getDay();
+    const weekdaysMap = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const scheduleForDay = doctor.profile.schedule.find(
+      (s) => s.day === weekdaysMap[weekday]
+    );
+    if (!scheduleForDay) {
+      return res.json({ availableSlots: [] });
+    }
+    // Generate all half-hour slots
+    let allSlots = generateHalfHourSlots(scheduleForDay.startTime, scheduleForDay.endTime);
+    // Get already booked appointments
+    const bookedAppointments = await Appointment.find({
+      doctorId,
+      date
+    }).select("time");
+    const bookedTimes = bookedAppointments.map((a) => a.time);
+    // Filter out booked slots
+    const availableSlots = allSlots.filter((slot) => !bookedTimes.includes(slot));
+    res.json({ availableSlots });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }}

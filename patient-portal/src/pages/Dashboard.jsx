@@ -1,18 +1,15 @@
 import React, { useState, useEffect } from "react";
-import { fetchData } from "../axiosInstance/index.jsx"; // Update this path as per your file structure
+import { fetchData } from "../axiosInstance/index.jsx";
 import { Link, useLocation } from "react-router-dom";
 import { CiClock2 } from "react-icons/ci";
 import { SlCalender } from "react-icons/sl";
-import { IoIosArrowDroprightCircle } from "react-icons/io";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import io from "socket.io-client";
 
-// Initialize socket.io client
 const socket = io("http://localhost:5000", { withCredentials: true });
 
 function Dashboard() {
-  console.log("fetchDataIsworkin",)
   const [appointments, setAppointments] = useState([]);
   const [unreadCounts, setUnreadCounts] = useState({});
   const [error, setError] = useState("");
@@ -22,36 +19,22 @@ function Dashboard() {
   useEffect(() => {
     const userId = localStorage.getItem("userId");
     socket.emit("join", { userId, room: userId });
-    console.log(`Joined room: ${userId}`);
 
     const fetchAppointments = async () => {
       try {
         const data = await fetchData("/api/appointments/patient");
-        console.log("Appointments fetched:", data);
         setAppointments(data);
-      } catch (err) {
-        console.error("Failed to fetch appointments:", err);
+      } catch {
         setError("Failed to fetch appointments");
       }
     };
 
     const fetchUnreadCounts = async () => {
       try {
-        console.log("Fetching unread counts for patientId:", userId);
         const data = await fetchData(`/api/chat/unread-counts-patient/${userId}`);
-        console.log("Unread counts fetched:", data);
         setUnreadCounts(data);
-      } catch (error) {
-        console.error(
-          "Failed to fetch unread counts:",
-          error.response?.status,
-          error.response?.data
-        );
-        setError(
-          `Failed to fetch unread message counts: ${
-            error.response?.data?.message || error.message
-          }`
-        );
+      } catch (err) {
+        setError("Failed to fetch unread message counts");
       }
     };
 
@@ -63,166 +46,139 @@ function Dashboard() {
     fetchAll();
 
     socket.on("newMessage", (message) => {
-      console.log("New message received:", message);
       if (message.sender === "doctor" && location.pathname === "/dashboard") {
         const doctorId = message.doctorId;
-        const doctor = appointments.find((appt) => appt.doctorId._id === doctorId);
-        let doctorName = doctor?.doctorId.name || "Doctor";
-
-        if (!doctorName || doctorName === "Doctor") {
-          fetchData(`/api/doctors/${doctorId}`)
-            .then((res) => {
-              doctorName = res.name || "Doctor";
-              showNotification(doctorName, message.message);
-            })
-            .catch((err) => {
-              console.error("Failed to fetch doctor name:", err);
-              showNotification("Doctor", message.message);
-            });
-        } else {
-          showNotification(doctorName, message.message);
-        }
-
         setUnreadCounts((prev) => ({
           ...prev,
           [doctorId]: (prev[doctorId] || 0) + 1,
         }));
+
+        toast.info(`New message from Doctor: ${message.message}`, {
+          position: "top-right",
+          autoClose: 4000,
+        });
       }
     });
 
     return () => {
       socket.off("newMessage");
     };
-  }, [location.pathname, appointments]);
-
-  const showNotification = (doctorName, message) => {
-    const audio = new Audio("/tone.wav");
-    audio.play().catch((err) => console.error("Audio play error:", err));
-    toast.info(`New message from ${doctorName}: ${message}`, {
-      position: "top-right",
-      autoClose: 5000,
-      hideProgressBar: false,
-      closeOnClick: true,
-      pauseOnHover: true,
-      draggable: true,
-      progress: undefined,
-    });
-  };
+  }, [location.pathname]);
 
   return (
     <div
       className="min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8 py-12 
-      bg-gradient-to-br from-gray-100 to-gray-300"
+      bg-primary text-primary"
     >
       <ToastContainer />
-      <div className="w-full max-w-5xl p-8 sm:p-10 rounded-3xl bg-white shadow-2xl">
-        <h3 className="text-3xl font-bold mb-8 text-gray-800 text-center">
-          Your Appointments
-        </h3>
+      <div className="card w-full max-w-6xl rounded-[50px] p-6 sm:p-8 text-primary shadow-card">
+        <h2 className="text-2xl sm:text-3xl font-bold mb-6 text-center">
+         Your Appointments
+        </h2>
 
-        {error && <p className="text-red-500 text-center mb-4">{error}</p>}
+        {error && (
+          <div className="mb-4 p-3 rounded bg-status-red text-white text-center">
+            {error}
+          </div>
+        )}
+
+       
 
         {isLoading ? (
-          <p className="text-gray-600 text-center py-6">Loading...</p>
+          <div className="flex flex-col gap-3">
+            {Array(3)
+              .fill()
+              .map((_, i) => (
+                <div
+                  key={i}
+                  className="p-4 sm:p-5 rounded-xl bg-card border border-primary shadow-card animate-pulse"
+                >
+                  <div className="mb-1 h-4 bg-secondary rounded w-3/4"></div>
+                  <div className="mb-1 h-4 bg-secondary rounded w-1/2"></div>
+                  <div className="mb-1 h-4 bg-secondary rounded w-2/3"></div>
+                  <div className="flex gap-2 mt-3">
+                    <div className="h-8 bg-secondary rounded-lg w-20"></div>
+                    <div className="h-8 bg-secondary rounded-lg w-24"></div>
+                  </div>
+                </div>
+              ))}
+          </div>
+        ) : appointments.length === 0 ? (
+          <p className="text-secondary">No appointments found</p>
         ) : (
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3">
             {appointments.map((appt) => (
               <div
                 key={appt._id}
-                className="flex rounded-2xl bg-white shadow-lg hover:shadow-xl transition-transform 
-                transform hover:-translate-y-1 border border-gray-100"
+                className="p-5 rounded-xl bg-card border border-primary shadow-card 
+                hover:scale-[1.02] transition-all duration-300 text-primary"
               >
-                <div
-                  className={`w-[8px] rounded-l-2xl ${
-                    appt.status === "confirmed"
-                      ? "bg-gradient-to-b from-green-400 to-green-600"
-                      : appt.status === "completed"
-                      ? "bg-gradient-to-b from-blue-400 to-blue-600"
-                      : "bg-gradient-to-b from-yellow-400 to-yellow-600"
-                  }`}
-                />
-                <div className="flex-1 p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
-                  <div className="space-y-3 text-gray-700">
-                    <p className="flex items-center gap-2">
-                      <SlCalender className="text-yellow-500 text-lg" />
-                      <span className="font-medium">
-                        {new Date(appt.date).toLocaleDateString()}
-                      </span>
-                    </p>
-                    <p className="flex items-center gap-2">
-                      <CiClock2 className="text-yellow-500 text-lg" />
-                      <span className="font-medium">{appt.time}</span>
-                    </p>
-                    <p>
-                      <span className="font-semibold text-gray-900">Doctor:</span>{" "}
-                      {appt.doctorId.name}
-                    </p>
-                    <p>
-                      <span className="font-semibold text-gray-900">Doctor ID:</span>{" "}
-                      {appt.doctorId._id}
-                    </p>
-                  </div>
-                  <div className="space-y-2 space-x-1 text-sm text-right">
-                    <p>
-                      <span className="font-semibold text-gray-900">Status:</span>{" "}
-                      <span
-                        className={`px-3 py-1 rounded-full text-sm font-semibold text-white shadow-md ${
-                          appt.status === "confirmed"
-                            ? "bg-green-500"
-                            : appt.status === "completed"
-                            ? "bg-blue-500"
-                            : "bg-yellow-500 text-black"
-                        }`}
-                      >
-                        {appt.status}
-                      </span>
-                    </p>
-                    <p>
-                      <span className="font-semibold text-gray-900">Payment:</span>{" "}
-                      <span
-                        className={`px-3 py-1 rounded-full text-sm font-semibold text-white shadow-md ${
-                          appt.paymentStatus === "paid"
-                            ? "bg-green-500"
-                            : "bg-yellow-500 text-black"
-                        }`}
-                      >
-                        {appt.paymentStatus}
-                      </span>
-                    </p>
-                    {appt.paymentStatus === "pending" && (
-                      <Link
-                        to={`/pay/${appt._id}`}
-                        className="inline-block text-blue-500 font-medium hover:underline"
-                      >
-                        💳 Pay Now
-                      </Link>
-                    )}
+                <div className="flex justify-between items-start mb-4">
+                  <h4 className="text-lg font-semibold">
+                    Doctor: {appt.doctorId?.name || "N/A"}
+                  </h4>
+                  <span
+                    className={`px-3 py-1 rounded-full text-sm font-semibold bg-opacity-70 ${
+                      appt.status === "confirmed"
+                        ? "bg-status-green"
+                        : appt.status === "completed"
+                        ? "bg-status-blue"
+                        : "bg-status-yellow"
+                    } text-white`}
+                  >
+                    {appt.status}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                  <p className="flex items-center gap-2">
+                    <SlCalender className="text-accent" />
+                    {new Date(appt.date).toLocaleDateString()}
+                  </p>
+                  <p className="flex items-center gap-2">
+                    <CiClock2 className="text-accent" />
+                    {appt.time}
+                  </p>
+                </div>
+
+                <div className="flex  flex-wrap gap-3">
+                  <span
+                    className={`px-3 flex justify-center items-center py-1 rounded-full text-sm font-semibold shadow ${
+                      appt.paymentStatus === "paid"
+                        ? "bg-status-green text-white"
+                        : "bg-status-yellow text-black"
+                    }`}
+                  >
+                    Payment: {appt.paymentStatus}
+                  </span>
+                  {appt.paymentStatus === "pending" && (
                     <Link
-                      to={`/video-call/${appt._id}`}
-                      className="inline-block text-purple-500 font-medium hover:underline bg-black rounded-[20px] px-2 py-1"
+                      to={`/pay/${appt._id}`}
+                      className="bg-accent text-white px-4 py-2 rounded-lg hover:bg-opacity-90 transition-all duration-300"
                     >
-                      📹 Video Call
+                      Pay Now
                     </Link>
-                    <Link
-                      to={`/chat/${appt.doctorId._id}`}
-                      className="inline-block text-pink-500 font-medium hover:underline bg-black rounded-[20px] px-2 py-1"
-                    >
-                      💬 Chat with Doctor{" "}
-                      {unreadCounts[appt.doctorId._id] ? (
-                        <span className="ml-2 bg-red-500 text-white rounded-full px-2 py-1 text-xs">
-                          {unreadCounts[appt.doctorId._id]}
-                        </span>
-                      ) : null}
-                    </Link>
-                  </div>
+                  )}
+                  <Link
+                    to={`/video-call/${appt._id}`}
+                    className="inline-flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg hover:bg-opacity-90 transition-all duration-300"
+                  >
+                    📹 Video Call
+                  </Link>
+                  <Link
+                    to={`/chat/${appt.doctorId?._id}`}
+                    className="inline-flex items-center gap-2 bg-accent text-white px-4 py-2 rounded-lg hover:bg-opacity-90 transition-all duration-300"
+                  >
+                    💬 Chat with Doctor
+                    {unreadCounts[appt.doctorId?._id] ? (
+                      <span className="ml-2 bg-status-red text-white rounded-full px-2 py-1 text-xs">
+                        {unreadCounts[appt.doctorId?._id]}
+                      </span>
+                    ) : null}
+                  </Link>
                 </div>
               </div>
             ))}
-            {appointments.length === 0 && !error && (
-              <p className="text-gray-600 text-center py-6">
-                No appointments found
-              </p>
-            )}
           </div>
         )}
       </div>

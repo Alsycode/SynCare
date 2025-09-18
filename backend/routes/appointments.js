@@ -26,5 +26,5 @@ router.get('/admin/all', auth, isAdmin, controller.getAllAppointmentsAdmin);
 
 // Validate Appointment Token
 router.get('/validate/:appointmentId', controller.validateAppointmentToken);
-
+router.get("/available", controller.getAvailableSlots);
 module.exports = router;

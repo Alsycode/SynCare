@@ -8,27 +8,32 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { theme } = useContext(ThemeContext);
-  const [visibleCount] = useState(5); // Fixed to show only 5 appointments
+  const [visibleCount] = useState(5); // Show only 5 appointments
+  const [doctors, setDoctors] = useState([]); // ✅ new state
   const navigate = useNavigate();
-  console.log("appointments", appointments);
 
   const isAuthenticated = !!localStorage.getItem("token");
   if (!isAuthenticated) {
     return <Navigate to="/login" />;
   }
 
+  // Fetch appointments
   useEffect(() => {
     const fetchAppointments = async () => {
       try {
         setLoading(true);
         const data = await fetchData("/api/appointments/admin/all");
+
         // Fetch instructions for each appointment
         const appointmentsWithInstructions = await Promise.all(
           data.data.map(async (appt) => {
-            const instructions = await fetchData(`/api/instructions/appointment/${appt._id}`);
+            const instructions = await fetchData(
+              `/api/instructions/appointment/${appt._id}`
+            );
             return { ...appt, instructions: instructions || [] };
           })
         );
+
         setAppointments(appointmentsWithInstructions);
         setLoading(false);
       } catch (err) {
@@ -39,9 +44,22 @@ const Dashboard = () => {
     fetchAppointments();
   }, []);
 
+  // ✅ Fetch doctors list
+  useEffect(() => {
+    const fetchDoctors = async () => {
+      try {
+        const doctorData = await fetchData("/api/doctors/list");
+        setDoctors(doctorData); // doctorData should be an array
+      } catch (err) {
+        setError(err.message || "Failed to fetch doctors");
+      }
+    };
+    fetchDoctors();
+  }, []);
+
   const SkeletonRow = () => (
     <tr className="hover:bg-secondary transition-colors">
-      {Array(8) // Increased to 8 for the new instructions column
+      {Array(8)
         .fill()
         .map((_, index) => (
           <td key={index} className="py-2 px-3 border-b border-primary">
@@ -52,22 +70,32 @@ const Dashboard = () => {
   );
 
   const [selectedAppointment, setSelectedAppointment] = useState(null);
-  const [formData, setFormData] = useState({ instructions: "", isOngoing: false });
+  const [formData, setFormData] = useState({
+    instructions: "",
+    isOngoing: false,
+  });
 
   const handleAddInstructions = async (id) => {
     try {
       await fetchData(`/api/appointments/${id}/instructions`, {
         method: "PUT",
-        data: { instructions: formData.instructions, isOngoing: formData.isOngoing },
+        data: {
+          instructions: formData.instructions,
+          isOngoing: formData.isOngoing,
+        },
       });
-      // Refresh appointments to reflect new instructions
+
+      // Refresh appointments
       const data = await fetchData("/api/appointments/admin/all");
       const appointmentsWithInstructions = await Promise.all(
         data.data.map(async (appt) => {
-          const instructions = await fetchData(`/api/instructions/appointment/${appt._id}`);
+          const instructions = await fetchData(
+            `/api/instructions/appointment/${appt._id}`
+          );
           return { ...appt, instructions: instructions || [] };
         })
       );
+
       setAppointments(appointmentsWithInstructions);
       setSelectedAppointment(null);
       setFormData({ instructions: "", isOngoing: false });
@@ -79,8 +107,14 @@ const Dashboard = () => {
   const openInstructionsForm = (appointment) => {
     setSelectedAppointment(appointment);
     setFormData({
-      instructions: appointment.instructions.length > 0 ? appointment.instructions[0].text : "",
-      isOngoing: appointment.instructions.length > 0 ? appointment.instructions[0].isOngoing : false,
+      instructions:
+        appointment.instructions.length > 0
+          ? appointment.instructions[0].text
+          : "",
+      isOngoing:
+        appointment.instructions.length > 0
+          ? appointment.instructions[0].isOngoing
+          : false,
     });
   };
 
@@ -92,6 +126,7 @@ const Dashboard = () => {
     >
       <div className="card w-full max-w-7xl rounded-[50px] p-6 sm:p-8 text-primary">
         <div className="flex flex-col gap-5">
+          {/* Header Cards */}
           <div className="flex flex-col md:flex-row gap-5 flex-wrap">
             <div className="card flex-[3] flex flex-col md:flex-row items-center rounded-xl p-5 backdrop-blur-lg border border-primary shadow-card hover:scale-105 transition-transform">
               <img
@@ -104,10 +139,13 @@ const Dashboard = () => {
                   Hello, <span className="text-accent">Admin</span>
                 </h2>
                 <p className="text-secondary">
-                  Welcome to the Admin Dashboard. Manage your hospital operations efficiently.
+                  Welcome to the Admin Dashboard. Manage your hospital
+                  operations efficiently.
                 </p>
               </div>
             </div>
+
+            {/* Total Appointments */}
             <div className="card flex-1 rounded-xl p-4 text-primary backdrop-blur-lg border border-primary shadow-card hover:scale-105 transition-transform">
               <p className="text-base md:text-lg font-medium tracking-wide">
                 Total Appointments
@@ -120,14 +158,22 @@ const Dashboard = () => {
                 )}
               </h3>
             </div>
+
+            {/* ✅ Registered Doctors */}
             <div className="card flex-1 rounded-xl p-4 text-primary backdrop-blur-lg border border-primary shadow-card hover:scale-105 transition-transform">
               <p className="text-base md:text-lg font-medium tracking-wide">
                 Registered Doctors
               </p>
-              <h3 className="text-2xl md:text-3xl font-bold mt-2">10</h3>
+              <h3 className="text-2xl md:text-3xl font-bold mt-2">
+                {doctors.length > 0 ? doctors.length : "0"}
+              </h3>
             </div>
           </div>
-          <div className="w-full text-left text-xl font-bold"><h2>Pending Appointments</h2></div>
+
+          {/* Pending Appointments Table */}
+          <div className="w-full text-left text-xl font-bold">
+            <h2>Pending Appointments</h2>
+          </div>
           <div className="overflow-x-auto rounded-2xl bg-card border border-primary shadow-card">
             <table className="min-w-full text-primary text-sm md:text-base">
               <thead>
@@ -139,7 +185,7 @@ const Dashboard = () => {
                   <th className="py-2 px-3 text-center">Status</th>
                   <th className="py-2 px-3 text-center">Payment</th>
                   <th className="py-2 px-3 text-center">Feedback</th>
-                  <th className="py-2 px-3 text-center">Instructions</th> {/* New column */}
+                  <th className="py-2 px-3 text-center">Instructions</th>
                 </tr>
               </thead>
               <tbody>
@@ -149,13 +195,19 @@ const Dashboard = () => {
                     .map((_, index) => <SkeletonRow key={index} />)
                 ) : error ? (
                   <tr>
-                    <td colSpan="8" className="py-3 px-4 text-center text-red-500">
+                    <td
+                      colSpan="8"
+                      className="py-3 px-4 text-center text-red-500"
+                    >
                       {error}
                     </td>
                   </tr>
                 ) : appointments.length === 0 ? (
                   <tr>
-                    <td colSpan="8" className="py-3 px-4 text-center text-secondary">
+                    <td
+                      colSpan="8"
+                      className="py-3 px-4 text-center text-secondary"
+                    >
                       No appointments available
                     </td>
                   </tr>
@@ -164,7 +216,10 @@ const Dashboard = () => {
                     .filter((item) => item.status === "pending")
                     .slice(0, visibleCount)
                     .map((a) => (
-                      <tr key={a._id} className="hover:bg-secondary transition-colors">
+                      <tr
+                        key={a._id}
+                        className="hover:bg-secondary transition-colors"
+                      >
                         <td className="py-2 px-3 border-b border-primary">
                           {a.patientId?.name || "N/A"}
                         </td>
@@ -174,7 +229,9 @@ const Dashboard = () => {
                         <td className="py-2 px-3 border-b border-primary">
                           {new Date(a.date).toLocaleDateString()}
                         </td>
-                        <td className="py-2 px-3 border-b border-primary">{a.time}</td>
+                        <td className="py-2 px-3 border-b border-primary">
+                          {a.time}
+                        </td>
                         <td className="py-2 px-3 border-b border-primary">
                           <span
                             className={`px-2 py-1 rounded-full text-xs md:text-sm font-semibold ${
@@ -221,7 +278,9 @@ const Dashboard = () => {
                             onClick={() => openInstructionsForm(a)}
                             className="bg-blue-500 text-white px-2 py-1 rounded-lg text-xs md:text-sm hover:bg-blue-600 transition-all duration-300"
                           >
-                            {a.instructions.length > 0 ? "Edit Instructions" : "Add Instructions"}
+                            {a.instructions.length > 0
+                              ? "Edit Instructions"
+                              : "Add Instructions"}
                           </button>
                         </td>
                       </tr>
@@ -243,10 +302,13 @@ const Dashboard = () => {
         </div>
       </div>
 
+      {/* Instructions Modal */}
       {selectedAppointment && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
           <div className="bg-white p-6 rounded-xl border border-gray-300 max-h-[90vh] w-full max-w-md overflow-y-auto">
-            <h3 className="text-xl font-semibold mb-4">Add/Edit Instructions</h3>
+            <h3 className="text-xl font-semibold mb-4">
+              Add/Edit Instructions
+            </h3>
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -275,7 +337,9 @@ const Dashboard = () => {
                   }
                   className="mr-2"
                 />
-                <span>Mark as ongoing (carries forward to future appointments)</span>
+                <span>
+                  Mark as ongoing (carries forward to future appointments)
+                </span>
               </div>
               <div className="flex justify-end gap-2">
                 <button

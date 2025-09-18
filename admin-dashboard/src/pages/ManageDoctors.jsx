@@ -93,7 +93,9 @@ function ManageDoctors() {
           >
             {["name", "email", "phone", "specialty"].map((field) => (
               <div className="mb-2" key={field}>
-                <label className="block mb-1 capitalize text-primary">{field}</label>
+                <label className="block mb-1 capitalize text-primary text-left">
+                  {field}
+                </label>
                 <input
                   type={field === "email" ? "email" : "text"}
                   value={formData[field]}
@@ -122,7 +124,7 @@ function ManageDoctors() {
             className="p-4 sm:p-6 rounded-xl card flex flex-col gap-3"
           >
             <div className="mb-2">
-              <label className="block mb-1 text-primary">Doctor</label>
+              <label className="block mb-1 text-primary text-left">Doctor</label>
               <select
                 value={scheduleForm.doctorId}
                 onChange={(e) =>
@@ -145,7 +147,7 @@ function ManageDoctors() {
                 key={index}
                 className="mb-3 p-3 sm:p-4 rounded bg-secondary border border-primary flex flex-col gap-3"
               >
-                <label className="block mb-1 text-primary">
+                <label className="block mb-1 text-primary text-left">
                   Schedule Slot {index + 1}
                 </label>
                 <input

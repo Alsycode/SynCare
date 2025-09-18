@@ -19,11 +19,11 @@ function FeedbackForm() {
     }
 
     // Validate token with backend (simplified check)
-    fetchData.get(`/api/appointments/validate/${appointmentId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      .then((res) => {
-        if (res.data.valid) setIsValid(true);
+    fetchData(`/api/appointments/validate/${appointmentId}`, {
+  method: "GET",
+  headers: { Authorization: `Bearer ${token}` }
+}).then((res) => {
+        if (res.valid) setIsValid(true);
         else setError("Invalid or expired feedback link");
       })
       .catch(() => setError("Failed to validate feedback link"));
@@ -36,15 +36,15 @@ function FeedbackForm() {
       return;
     }
     try {
-      await fetchData.post(
-        `/api/feedback`,
-        {
-          appointmentId,
-          rating: formData.rating,
-          comments: formData.comments,
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+     await fetchData('/api/feedback', {
+  method: "POST",
+  headers: { Authorization: `Bearer ${token}` },
+  data: {
+    appointmentId,
+    rating: formData.rating,
+    comments: formData.comments,
+  }
+});
       setSuccess("Feedback submitted successfully!");
       setError("");
       setFormData({ rating: 5, comments: "" });

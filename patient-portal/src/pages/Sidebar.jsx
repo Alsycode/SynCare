@@ -7,6 +7,9 @@ import { IoChatbubbleEllipsesSharp } from 'react-icons/io5';
 import { FaTint } from 'react-icons/fa';
 import { FiLogOut } from 'react-icons/fi'; // Logout icon
 import { useContext } from 'react';
+import { ThemeContext } from '../context/ThemeContext';
+import { MdLightMode } from "react-icons/md";
+import { MdDarkMode } from "react-icons/md";
 const Sidebar = () => {
   const navigate = useNavigate();
 const { theme, toggleTheme } = useContext(ThemeContext);
@@ -17,7 +20,7 @@ const { theme, toggleTheme } = useContext(ThemeContext);
   };
 
   return (
-    <nav className="fixed w-[120px] bg-sidebar flex flex-col justify-center h-full items-center py-[30px]">
+   <nav className="fixed w-[120px] bg-sidebar flex flex-col justify-center h-full items-center py-[30px] shadow-[4px_0_6px_rgba(0,0,0,0.2)]">
       {/* Sidebar Icons */}
       <div className="flex flex-col gap-[30px]">
         <Link to="/dashboard">

@@ -19,6 +19,7 @@ function Login({ setToken }) {
     console.log("Response token:", res.token);
     localStorage.setItem('token', res.token);
     localStorage.setItem('userId', res.id);
+      localStorage.setItem('name', res.name);
     setToken(res.token);
     navigate('/dashboard');
   } catch (err) {
@@ -39,7 +40,7 @@ function Login({ setToken }) {
     >
       <div className="flex w-full md:w-1/2 items-center justify-center px-6 py-12">
         <div className="w-full max-w-md bg-white/80 backdrop-blur-md rounded-3xl shadow-2xl p-8 sm:p-10">
-          <h2 className="text-3xl font-bold mb-6 text-center text-gray-800">
+          <h2 className="text-3xl font-bold mb-6  text-gray-800">
             Patient Login
           </h2>
           {error && (
@@ -49,7 +50,7 @@ function Login({ setToken }) {
           )}
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-gray-700 font-medium mb-1">
+              <label className="block text-gray-700 text-start font-medium mb-1">
                 Email
               </label>
               <input
@@ -61,7 +62,7 @@ function Login({ setToken }) {
               />
             </div>
             <div>
-              <label className="block text-gray-700 font-medium mb-1">
+              <label className="block text-gray-700 text-start font-medium mb-1">
                 Password
               </label>
               <input

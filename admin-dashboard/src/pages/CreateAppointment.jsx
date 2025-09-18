@@ -5,6 +5,7 @@ import { fetchData } from "../axiosInstance/index";
 function CreateAppointment() {
   const [patients, setPatients] = useState([]);
   const [doctors, setDoctors] = useState([]);
+  const [availableSlots, setAvailableSlots] = useState([]);
   const [formData, setFormData] = useState({
     patientId: "",
     doctorId: "",
@@ -15,6 +16,7 @@ function CreateAppointment() {
   const [success, setSuccess] = useState("");
   const { theme } = useContext(ThemeContext);
 
+  // Fetch patients and doctors list
   useEffect(() => {
     const fetchLists = async () => {
       try {
@@ -29,6 +31,27 @@ function CreateAppointment() {
     fetchLists();
   }, []);
 
+  // Fetch available slots whenever doctor or date changes
+  useEffect(() => {
+    const fetchSlots = async () => {
+      if (!formData.doctorId || !formData.date) {
+        setAvailableSlots([]);
+        return;
+      }
+      try {
+        const res = await fetchData(
+          `/api/appointments/available?doctorId=${formData.doctorId}&date=${formData.date}`
+        );
+        setAvailableSlots(res.availableSlots || []);
+        setFormData((prev) => ({ ...prev, time: "" })); // reset time on doctor/date change
+      } catch (err) {
+        setError(err.message || "Failed to fetch available slots");
+        setAvailableSlots([]);
+      }
+    };
+    fetchSlots();
+  }, [formData.doctorId, formData.date]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -39,6 +62,7 @@ function CreateAppointment() {
       setSuccess("Appointment created successfully");
       setError("");
       setFormData({ patientId: "", doctorId: "", date: "", time: "" });
+      setAvailableSlots([]);
     } catch (err) {
       setError(err.message || "Failed to create appointment");
       setSuccess("");
@@ -68,8 +92,9 @@ function CreateAppointment() {
         )}
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          {/* Patient */}
           <div className="mb-2">
-            <label className="block mb-1">Patient</label>
+            <label className="block mb-1 text-left">Patient</label>
             <select
               value={formData.patientId}
               onChange={(e) =>
@@ -87,8 +112,9 @@ function CreateAppointment() {
             </select>
           </div>
 
+          {/* Doctor */}
           <div className="mb-2">
-            <label className="block mb-1">Doctor</label>
+            <label className="block mb-1 text-left">Doctor</label>
             <select
               value={formData.doctorId}
               onChange={(e) =>
@@ -106,8 +132,9 @@ function CreateAppointment() {
             </select>
           </div>
 
+          {/* Date */}
           <div className="mb-2">
-            <label className="block mb-1">Date</label>
+            <label className="block mb-1 text-left">Date</label>
             <input
               type="date"
               value={formData.date}
@@ -119,17 +146,29 @@ function CreateAppointment() {
             />
           </div>
 
+          {/* Time */}
           <div className="mb-4">
-            <label className="block mb-1">Time</label>
-            <input
-              type="time"
+            <label className="block mb-1 text-left">Time</label>
+            <select
               value={formData.time}
               onChange={(e) =>
                 setFormData({ ...formData, time: e.target.value })
               }
               className="w-full p-3 rounded bg-secondary border border-primary placeholder-text-secondary focus:outline-none focus:border-accent"
               required
-            />
+              disabled={!availableSlots.length}
+            >
+              <option value="">
+                {availableSlots.length
+                  ? "Select Time Slot"
+                  : "No slots available"}
+              </option>
+              {availableSlots.map((slot) => (
+                <option key={slot} value={slot}>
+                  {slot}
+                </option>
+              ))}
+            </select>
           </div>
 
           <button

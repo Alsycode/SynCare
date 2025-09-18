@@ -15,7 +15,10 @@ exports.login = async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: '1d' }
     );
-    res.json({ token, role: user.role, id: user._id });
+    console.log("username",user);
+    
+    
+    res.json({ token, role: user.role, id: user._id,name:user.name });
   } catch (error) {
     res.status(500).json({ error: 'Server error' });
   }

@@ -62,7 +62,7 @@ function PatientListAdmin() {
     (currentPage - 1) * pageSize,
     currentPage * pageSize
   );
-
+console.log("paginatedPatients",paginatedPatients)
   const handleSelectPatient = (id) => {
     navigate(`/patient/${id}`);
   };
@@ -136,7 +136,7 @@ function PatientListAdmin() {
                   <th className="py-2 px-3 text-center">ID</th>
                   <th className="py-2 px-3 text-center">Email</th>
                   <th className="py-2 px-3 text-center">Phone</th>
-                  <th className="py-2 px-3 text-center">Medical History</th>
+                  {/* <th className="py-2 px-3 text-center">Medical History</th> */}
                 </tr>
               </thead>
               <tbody>
@@ -186,14 +186,14 @@ function PatientListAdmin() {
                       <td className="py-2 px-3 border-b border-primary">
                         {patient.phone || "N/A"}
                       </td>
-                      <td className="py-2 px-3 border-b border-primary">
+                      {/* <td className="py-2 px-3 border-b border-primary">
                         {patient.profile?.medicalHistory
                           ? patient.profile.medicalHistory.slice(0, 30) +
                             (patient.profile.medicalHistory.length > 30
                               ? "..."
                               : "")
                           : "No history"}
-                      </td>
+                      </td> */}
                     </tr>
                   ))
                 )}

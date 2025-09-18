@@ -65,7 +65,7 @@ const keyId = import.meta.env.VITE_RAZORPAY_KEY_ID; // ✅ Correct for Vite
           onClick={handlePayment}
           className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
         >
-          Pay ₹500
+          Pay ₹100
         </button>
       </div>
     </div>
