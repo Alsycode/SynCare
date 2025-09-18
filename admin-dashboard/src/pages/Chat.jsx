@@ -4,7 +4,7 @@ import io from "socket.io-client";
 import { ThemeContext } from "../context/ThemeContext";
 import { fetchData } from "../axiosInstance/index";
 
-const socket = io("http://localhost:5000", { withCredentials: true });
+const socket = io("https://syncare.onrender.com/", { withCredentials: true });
 
 function Chat() {
   const { patientId } = useParams();

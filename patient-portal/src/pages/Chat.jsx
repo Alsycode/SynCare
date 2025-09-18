@@ -4,7 +4,7 @@ import io from "socket.io-client";
 import { fetchData } from "../axiosInstance/index.jsx";
 import { IoSend } from "react-icons/io5";
 
-const socket = io("http://localhost:5000", { withCredentials: true });
+const socket = io("https://syncare.onrender.com/", { withCredentials: true });
 
 function Chat() {
   const { doctorId } = useParams();
