@@ -4,7 +4,7 @@ import { useParams } from "react-router-dom";
 
 const socket = io("https://syncare.onrender.com/", { transports: ["websocket"] });
 
-function VideoCall() {
+const VideoCall = () => {
   const { roomId } = useParams();
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);

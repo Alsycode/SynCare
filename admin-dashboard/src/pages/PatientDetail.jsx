@@ -17,7 +17,7 @@ import {
 
 } from "react-icons/fa";
 
-function PatientDetail() {
+const PatientDetail = () => {
   const { patientId } = useParams();
   const [patient, setPatient] = useState(null);
   const [medicalHistory, setMedicalHistory] = useState(null);

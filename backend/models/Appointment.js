@@ -19,6 +19,7 @@ const appointmentSchema = new mongoose.Schema({
     default: {}
   },
   progressStatus: { type: String, enum: ['improving', 'stable', 'worsening', 'unknown'], default: 'unknown' },
+  notificationSent: { type: Boolean, default: false }, // New field to track notification status
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });

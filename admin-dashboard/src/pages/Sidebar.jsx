@@ -13,7 +13,7 @@ import "react-toastify/dist/ReactToastify.css";
 import { ThemeContext } from "../context/ThemeContext";
 import { BiSolidUserDetail } from "react-icons/bi";
 
-export const Sidebar = () => {
+const Sidebar = () => {
   const [show, setShow] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(true);
   const role = localStorage.getItem("role");
@@ -193,3 +193,6 @@ export const Sidebar = () => {
     </div>
   );
 };
+
+
+export default Sidebar

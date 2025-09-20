@@ -3,28 +3,50 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { ThemeContext } from "../context/ThemeContext";
 import { fetchData } from "../axiosInstance/index";
 
+/**
+ * Dashboard
+ * ----------
+ * Admin dashboard for viewing, managing, and updating appointment information.
+ * - Fetches all appointments, fetches list of doctors, and lets admin add/edit instructions for appointments.
+ * - Displays important dashboard stats: total appointments and number of registered doctors.
+ * - Includes a table listing pending appointments (up to 'visibleCount').
+ * - Handles UI theming and authentication via context, routing, and localStorage.
+ */
 const Dashboard = () => {
+  // Main data sets for the component
   const [appointments, setAppointments] = useState([]);
+  const [doctors, setDoctors] = useState([]);
+
+  // Status and control states
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Determines how many appointments to show in summary table
+  const [visibleCount] = useState(5);
+
+  // Theme for Tailwind classes
   const { theme } = useContext(ThemeContext);
-  const [visibleCount] = useState(5); // Show only 5 appointments
-  const [doctors, setDoctors] = useState([]); // ✅ new state
+
+  // Navigate hook for programmatic navigation
   const navigate = useNavigate();
 
+  // Authentication check: redirect unauthenticated users to login
   const isAuthenticated = !!localStorage.getItem("token");
   if (!isAuthenticated) {
     return <Navigate to="/login" />;
   }
 
-  // Fetch appointments
+  /**
+   * Fetches all appointments from the backend, then fetches instructions for each appointment.
+   * Runs on initial render.
+   */
   useEffect(() => {
     const fetchAppointments = async () => {
       try {
         setLoading(true);
         const data = await fetchData("/api/appointments/admin/all");
 
-        // Fetch instructions for each appointment
+        // For each appointment, fetch instructions and attach to object
         const appointmentsWithInstructions = await Promise.all(
           data.data.map(async (appt) => {
             const instructions = await fetchData(
@@ -44,12 +66,15 @@ const Dashboard = () => {
     fetchAppointments();
   }, []);
 
-  // ✅ Fetch doctors list
+  /**
+   * Fetch the registered doctors from the backend API.
+   * Used for the dashboard stat card.
+   */
   useEffect(() => {
     const fetchDoctors = async () => {
       try {
         const doctorData = await fetchData("/api/doctors/list");
-        setDoctors(doctorData); // doctorData should be an array
+        setDoctors(doctorData);
       } catch (err) {
         setError(err.message || "Failed to fetch doctors");
       }
@@ -57,6 +82,10 @@ const Dashboard = () => {
     fetchDoctors();
   }, []);
 
+  /**
+   * Table skeleton row for loading/placeholder visuals.
+   * Rendered while `loading` is true.
+   */
   const SkeletonRow = () => (
     <tr className="hover:bg-secondary transition-colors">
       {Array(8)
@@ -69,12 +98,17 @@ const Dashboard = () => {
     </tr>
   );
 
+  // State for the Add/Edit Instructions modal
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [formData, setFormData] = useState({
     instructions: "",
     isOngoing: false,
   });
 
+  /**
+   * Handles submitting instructions for an appointment (add or edit).
+   * After submission, refreshes appointments and closes the modal.
+   */
   const handleAddInstructions = async (id) => {
     try {
       await fetchData(`/api/appointments/${id}/instructions`, {
@@ -85,7 +119,7 @@ const Dashboard = () => {
         },
       });
 
-      // Refresh appointments
+      // Refresh appointments after successful submission
       const data = await fetchData("/api/appointments/admin/all");
       const appointmentsWithInstructions = await Promise.all(
         data.data.map(async (appt) => {
@@ -104,6 +138,10 @@ const Dashboard = () => {
     }
   };
 
+  /**
+   * Opens the Add/Edit Instructions modal, prefilling current instructions if present.
+   * @param {Object} appointment - The appointment object to update
+   */
   const openInstructionsForm = (appointment) => {
     setSelectedAppointment(appointment);
     setFormData({
@@ -118,6 +156,7 @@ const Dashboard = () => {
     });
   };
 
+  // Render main dashboard
   return (
     <div
       className={`min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8 py-12 rounded-bl-[50px] rounded-tl-[50px] bg-primary ${
@@ -126,8 +165,9 @@ const Dashboard = () => {
     >
       <div className="card w-full max-w-7xl rounded-[50px] p-6 sm:p-8 text-primary">
         <div className="flex flex-col gap-5">
-          {/* Header Cards */}
+          {/* Summary Cards Row */}
           <div className="flex flex-col md:flex-row gap-5 flex-wrap">
+            {/* Welcome/admin card */}
             <div className="card flex-[3] flex flex-col md:flex-row items-center rounded-xl p-5 backdrop-blur-lg border border-primary shadow-card hover:scale-105 transition-transform">
               <img
                 src="/doc.png"
@@ -145,7 +185,7 @@ const Dashboard = () => {
               </div>
             </div>
 
-            {/* Total Appointments */}
+            {/* Total Appointments Card */}
             <div className="card flex-1 rounded-xl p-4 text-primary backdrop-blur-lg border border-primary shadow-card hover:scale-105 transition-transform">
               <p className="text-base md:text-lg font-medium tracking-wide">
                 Total Appointments
@@ -159,7 +199,7 @@ const Dashboard = () => {
               </h3>
             </div>
 
-            {/* ✅ Registered Doctors */}
+            {/* Registered Doctors Card */}
             <div className="card flex-1 rounded-xl p-4 text-primary backdrop-blur-lg border border-primary shadow-card hover:scale-105 transition-transform">
               <p className="text-base md:text-lg font-medium tracking-wide">
                 Registered Doctors
@@ -212,6 +252,7 @@ const Dashboard = () => {
                     </td>
                   </tr>
                 ) : (
+                  // Render each pending appointment in the summary table (limit = visibleCount)
                   appointments
                     .filter((item) => item.status === "pending")
                     .slice(0, visibleCount)
@@ -288,6 +329,7 @@ const Dashboard = () => {
                 )}
               </tbody>
             </table>
+            {/* Option to load all appointments (if more pending exist) */}
             {!loading && !error && appointments.length > visibleCount && (
               <div className="flex justify-center">
                 <button
@@ -302,7 +344,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Instructions Modal */}
+      {/* Modal for Add/Edit Instructions */}
       {selectedAppointment && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
           <div className="bg-white p-6 rounded-xl border border-gray-300 max-h-[90vh] w-full max-w-md overflow-y-auto">

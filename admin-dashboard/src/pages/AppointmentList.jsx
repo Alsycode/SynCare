@@ -2,36 +2,58 @@ import React, { useState, useEffect, useContext } from "react";
 import { fetchData } from "../axiosInstance/index"; // Import the reusable fetchData function
 import { ThemeContext } from "../context/ThemeContext";
 
+/**
+ * AppointmentsList component displays a paginated and filterable list of appointments.
+ * 
+ * The component fetches appointments from an API endpoint, filters them based on user-selected criteria (status, payment status, date range), 
+ * and supports pagination to navigate through the appointments. 
+ * It also handles loading states and potential errors when fetching the data.
+ * 
+ * @returns {JSX.Element} A list of appointments with filter options and pagination controls.
+ */
 const AppointmentsList = () => {
-  const [appointments, setAppointments] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  // State for managing the list of appointments, loading state, error state, and filters.
+  const [appointments, setAppointments] = useState([]); // Stores the fetched appointment data
+  const [loading, setLoading] = useState(true); // Boolean to track loading state
+  const [error, setError] = useState(null); // Tracks errors during data fetching
   const [filters, setFilters] = useState({
-    status: "",
-    paymentStatus: "",
-    startDate: "",
-    endDate: "",
+    status: "", // Filters for appointment status (confirmed, completed, pending)
+    paymentStatus: "", // Filters for payment status (paid, unpaid)
+    startDate: "", // Filters for start date of appointments
+    endDate: "", // Filters for end date of appointments
   });
+  
+  // Theme context for the app's theme (for example, light/dark mode)
   const { theme } = useContext(ThemeContext);
 
-  // Pagination states
-  const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 10;
+  // Pagination state management
+  const [currentPage, setCurrentPage] = useState(1); // Tracks the current page in the paginated list
+  const pageSize = 10; // Number of appointments per page
 
+  /**
+   * useEffect hook to fetch the appointments from the API when the component mounts.
+   * The fetched data is stored in the state and loading state is updated.
+   */
   useEffect(() => {
     const fetchAppointments = async () => {
       try {
-        const data = await fetchData("/api/appointments/admin/all");
-        setAppointments(data.data);
-        setLoading(false);
+        const data = await fetchData("/api/appointments/admin/all"); // Fetch the appointment data
+        setAppointments(data.data); // Set the fetched appointments to state
+        setLoading(false); // Set loading state to false
       } catch (err) {
-        setError("Failed to load appointments");
-        setLoading(false);
+        setError("Failed to load appointments"); // Set error state if fetch fails
+        setLoading(false); // Set loading state to false
       }
     };
-    fetchAppointments();
+    fetchAppointments(); // Trigger the fetch operation
   }, []);
 
+  /**
+   * Filters the appointments based on the selected filters from the state.
+   * 
+   * @param {Object} appointment - The appointment object to be checked.
+   * @returns {boolean} - Returns true if the appointment matches all active filters, else false.
+   */
   const filteredAppointments = appointments.filter((appointment) => {
     const matchesStatus =
       !filters.status || appointment.status === filters.status;
@@ -45,18 +67,23 @@ const AppointmentsList = () => {
     return matchesStatus && matchesPaymentStatus && matchesDateRange;
   });
 
-  // Pagination calculation
+  // Pagination calculation: Total number of pages based on filtered appointments
   const totalPages = Math.ceil(filteredAppointments.length / pageSize);
   const paginatedAppointments = filteredAppointments.slice(
     (currentPage - 1) * pageSize,
     currentPage * pageSize
   );
 
-  // Reset page to 1 on filters change
+  // Reset page to 1 whenever the filters or filtered appointments change
   useEffect(() => {
     setCurrentPage(1);
   }, [filters, filteredAppointments.length]);
 
+  /**
+   * Handles changes to filter inputs and updates the filters state.
+   * 
+   * @param {Object} e - The event object from the input change.
+   */
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
     setFilters((prev) => ({
@@ -65,14 +92,23 @@ const AppointmentsList = () => {
     }));
   };
 
+  /**
+   * Decreases the current page by 1, ensuring that it does not go below 1.
+   */
   const handlePrevPage = () => {
     setCurrentPage((prev) => Math.max(prev - 1, 1));
   };
 
+  /**
+   * Increases the current page by 1, ensuring that it does not exceed the total number of pages.
+   */
   const handleNextPage = () => {
     setCurrentPage((prev) => Math.min(prev + 1, totalPages));
   };
 
+  /**
+   * Skeleton row component for loading state. Displays animated placeholder rows while data is being loaded.
+   */
   const SkeletonRow = () => (
     <tr className="animate-pulse">
       <td className="p-2 sm:p-3 border-b border-primary">
@@ -96,6 +132,7 @@ const AppointmentsList = () => {
     </tr>
   );
 
+  // Loading state: Displays a skeleton loader when data is being fetched.
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center px-2 sm:px-4 lg:px-6 py-12 bg-primary">
@@ -135,6 +172,7 @@ const AppointmentsList = () => {
     );
   }
 
+  // Error state: Displays an error message if the fetch operation fails.
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center px-2 sm:px-4 lg:px-6 py-12 bg-primary">
@@ -145,11 +183,13 @@ const AppointmentsList = () => {
     );
   }
 
+  // Main content: Displays the filtered and paginated list of appointments.
   return (
     <div className="min-h-screen flex items-center justify-center px-2 sm:px-4 lg:px-6 py-12 rounded-bl-[50px] rounded-tl-[50px] bg-primary">
       <div className="card w-full max-w-4xl sm:max-w-6xl lg:max-w-7xl p-4 sm:p-6 lg:p-8 text-primary">
-        <h1 className="text-2xl sm:text-3xl font-bold mb-6 text-center">All Appointments</h1>
+               <h1 className="text-2xl sm:text-3xl font-bold mb-6 text-center">All Appointments</h1>
 
+        {/* Filter Controls */}
         <div className="mb-6 flex flex-wrap gap-3 sm:gap-4 justify-center">
           <select
             name="status"
@@ -196,6 +236,7 @@ const AppointmentsList = () => {
           </label>
         </div>
 
+        {/* Appointments Table */}
         <div className="overflow-x-auto rounded-2xl card">
           <table className="min-w-full text-primary text-sm sm:text-base">
             <thead>
@@ -209,6 +250,7 @@ const AppointmentsList = () => {
               </tr>
             </thead>
             <tbody>
+              {/* Render the paginated list of appointments */}
               {paginatedAppointments.map((appointment) => (
                 <tr key={appointment._id} className="hover:bg-secondary transition-colors">
                   <td className="p-2 sm:p-3 border-b border-primary">{appointment.patientId?.name || "N/A"}</td>
@@ -239,6 +281,7 @@ const AppointmentsList = () => {
                   </td>
                 </tr>
               ))}
+              {/* Message if no appointments match the filters */}
               {filteredAppointments.length === 0 && (
                 <tr>
                   <td colSpan="6" className="text-center p-2 sm:p-4 text-secondary">
@@ -252,6 +295,7 @@ const AppointmentsList = () => {
 
         {/* Pagination Controls */}
         <div className="flex justify-center gap-4 mt-4">
+          {/* Previous Page Button */}
           <button
             onClick={handlePrevPage}
             disabled={currentPage === 1}
@@ -259,9 +303,13 @@ const AppointmentsList = () => {
           >
             Previous
           </button>
+          
+          {/* Page Info */}
           <span className="self-center">
             Page {currentPage} of {totalPages}
           </span>
+          
+          {/* Next Page Button */}
           <button
             onClick={handleNextPage}
             disabled={currentPage === totalPages}
@@ -276,3 +324,4 @@ const AppointmentsList = () => {
 };
 
 export default AppointmentsList;
+

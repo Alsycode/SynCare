@@ -13,6 +13,7 @@ const paymentRoutes = require("./routes/payments");
 const medicalHistoryRoutes = require("./routes/medicalHistory")
 const instructionRoutes = require("./routes/instructions")
 const Chat = require("./models/Chat");
+const { checkUpcomingAppointments } = require('./services/notification.js');
 require('dotenv').config();
 
 const app = express();
@@ -108,6 +109,7 @@ io.on('connection', (socket) => {
     // console.log('User disconnected:', socket.id);
   });
 });
-
+checkUpcomingAppointments(); // Run once to check immediately (optional)
+console.log('Notification scheduler started');
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));

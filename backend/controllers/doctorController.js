@@ -10,6 +10,7 @@ exports.addDoctor = async (req, res) => {
       return res.status(400).json({ error: 'Doctor already exists' });
     }
     const tempPassword = Math.random().toString(36).slice(-8);
+    console.log("temppass",tempPassword)
     const hashedPassword = await bcrypt.hash(tempPassword, 10);
 
     user = new User({

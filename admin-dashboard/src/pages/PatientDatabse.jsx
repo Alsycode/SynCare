@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ThemeContext } from "../context/ThemeContext";
 import { fetchData } from "../axiosInstance/index";
 
-function PatientListAdmin() {
+const PatientListAdmin = () => {
   const [patients, setPatients] = useState([]);
   const [search, setSearch] = useState("");
   const [filteredPatients, setFilteredPatients] = useState([]);

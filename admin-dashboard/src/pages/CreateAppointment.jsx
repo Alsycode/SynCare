@@ -2,21 +2,40 @@ import React, { useState, useEffect, useContext } from "react";
 import { ThemeContext } from "../context/ThemeContext";
 import { fetchData } from "../axiosInstance/index";
 
-function CreateAppointment() {
+/**
+ * CreateAppointment
+ * -----------------
+ * This component renders a form to create new patient appointments.
+ * It fetches the lists of patients and doctors, fetches available appointment slots
+ * when doctor/date changes, and submits a new appointment on form submit.
+ */
+const CreateAppointment = () => {
+  // State for patients and doctors dropdowns
   const [patients, setPatients] = useState([]);
   const [doctors, setDoctors] = useState([]);
+
+  // State for available time slots for a doctor on a specific date
   const [availableSlots, setAvailableSlots] = useState([]);
+
+  // State for the appointment form
   const [formData, setFormData] = useState({
     patientId: "",
     doctorId: "",
     date: "",
     time: "",
   });
+
+  // Status message states
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  // Get current theme (light/dark) from context for adaptive styling
   const { theme } = useContext(ThemeContext);
 
-  // Fetch patients and doctors list
+  /**
+   * useEffect to fetch list of patients and doctors
+   * Runs once on mount.
+   */
   useEffect(() => {
     const fetchLists = async () => {
       try {
@@ -31,7 +50,11 @@ function CreateAppointment() {
     fetchLists();
   }, []);
 
-  // Fetch available slots whenever doctor or date changes
+  /**
+   * useEffect to fetch available time slots
+   * Runs every time doctorId or date changes in formData.
+   * Resets slot/time selection if doctor or date is cleared/changed.
+   */
   useEffect(() => {
     const fetchSlots = async () => {
       if (!formData.doctorId || !formData.date) {
@@ -39,11 +62,12 @@ function CreateAppointment() {
         return;
       }
       try {
+        // Fetch available slots for the selected doctor/date
         const res = await fetchData(
           `/api/appointments/available?doctorId=${formData.doctorId}&date=${formData.date}`
         );
         setAvailableSlots(res.availableSlots || []);
-        setFormData((prev) => ({ ...prev, time: "" })); // reset time on doctor/date change
+        setFormData((prev) => ({ ...prev, time: "" })); // reset selected time slot
       } catch (err) {
         setError(err.message || "Failed to fetch available slots");
         setAvailableSlots([]);
@@ -52,6 +76,10 @@ function CreateAppointment() {
     fetchSlots();
   }, [formData.doctorId, formData.date]);
 
+  /**
+   * Handles form submission.
+   * Posts form data to create a new appointment and shows result.
+   */
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -61,6 +89,7 @@ function CreateAppointment() {
       });
       setSuccess("Appointment created successfully");
       setError("");
+      // Reset form and time slots on success
       setFormData({ patientId: "", doctorId: "", date: "", time: "" });
       setAvailableSlots([]);
     } catch (err) {
@@ -80,6 +109,7 @@ function CreateAppointment() {
           Create Appointment
         </h2>
 
+        {/* Show error/success messages */}
         {error && (
           <div className="mb-4 p-3 rounded bg-status-red text-white text-center">
             {error}
@@ -91,8 +121,9 @@ function CreateAppointment() {
           </div>
         )}
 
+        {/* Appointment creation form */}
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          {/* Patient */}
+          {/* Patient selection dropdown */}
           <div className="mb-2">
             <label className="block mb-1 text-left">Patient</label>
             <select
@@ -112,7 +143,7 @@ function CreateAppointment() {
             </select>
           </div>
 
-          {/* Doctor */}
+          {/* Doctor selection dropdown */}
           <div className="mb-2">
             <label className="block mb-1 text-left">Doctor</label>
             <select
@@ -132,7 +163,7 @@ function CreateAppointment() {
             </select>
           </div>
 
-          {/* Date */}
+          {/* Date input */}
           <div className="mb-2">
             <label className="block mb-1 text-left">Date</label>
             <input
@@ -146,7 +177,7 @@ function CreateAppointment() {
             />
           </div>
 
-          {/* Time */}
+          {/* Time slot selection */}
           <div className="mb-4">
             <label className="block mb-1 text-left">Time</label>
             <select
@@ -171,6 +202,7 @@ function CreateAppointment() {
             </select>
           </div>
 
+          {/* Submit button */}
           <button
             type="submit"
             className="w-full bg-accent text-white p-3 rounded-lg transition-all duration-300 hover:bg-opacity-90"
@@ -181,6 +213,6 @@ function CreateAppointment() {
       </div>
     </div>
   );
-}
+};
 
 export default CreateAppointment;

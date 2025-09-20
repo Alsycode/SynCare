@@ -1,27 +1,38 @@
 import React, { useState, useEffect, useContext } from "react";
-import { ThemeContext } from "../context/ThemeContext";
-import { fetchData } from "../axiosInstance/index";
+import { ThemeContext } from "../context/ThemeContext"; // Theme context for dark/light mode
+import { fetchData } from "../axiosInstance/index"; // Axios helper for API calls
 
-function ManageDoctors() {
+// ManageDoctors component handles adding doctors and updating their schedules
+const ManageDoctors = () => {
+  // List of doctors fetched from backend
   const [doctors, setDoctors] = useState([]);
+
+  // Form data for adding a new doctor
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     phone: "",
     specialty: "",
   });
+
+  // State for schedule update form
   const [scheduleForm, setScheduleForm] = useState({
-    doctorId: "",
-    schedule: [{ day: "", startTime: "", endTime: "" }],
+    doctorId: "", // selected doctor id
+    schedule: [{ day: "", startTime: "", endTime: "" }], // multiple schedule slots
   });
+
+  // Error and success messages
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  // Theme context value (could be used for conditional styling)
   const { theme } = useContext(ThemeContext);
 
+  // Fetch doctors on component mount
   useEffect(() => {
     const fetchDoctors = async () => {
       try {
-        const data = await fetchData("/api/doctors/list");
+        const data = await fetchData("/api/doctors/list"); // API call to fetch doctors
         setDoctors(data);
       } catch {
         setError("Failed to fetch doctors");
@@ -30,6 +41,7 @@ function ManageDoctors() {
     fetchDoctors();
   }, []);
 
+  // Handle adding a new doctor
   const handleAddDoctor = async (e) => {
     e.preventDefault();
     try {
@@ -39,7 +51,9 @@ function ManageDoctors() {
       });
       setSuccess("Doctor added successfully");
       setError("");
+      // Reset form
       setFormData({ name: "", email: "", phone: "", specialty: "" });
+      // Refresh doctors list
       const data = await fetchData("/api/doctors/list");
       setDoctors(data);
     } catch {
@@ -48,6 +62,7 @@ function ManageDoctors() {
     }
   };
 
+  // Handle updating doctor schedule
   const handleUpdateSchedule = async (e) => {
     e.preventDefault();
     try {
@@ -57,6 +72,7 @@ function ManageDoctors() {
       });
       setSuccess("Schedule updated successfully");
       setError("");
+      // Reset schedule input after update
       setScheduleForm({
         ...scheduleForm,
         schedule: [{ day: "", startTime: "", endTime: "" }],
@@ -67,6 +83,7 @@ function ManageDoctors() {
     }
   };
 
+  // Add new empty schedule slot (to allow multiple time ranges per doctor)
   const addScheduleSlot = () => {
     setScheduleForm({
       ...scheduleForm,
@@ -75,9 +92,13 @@ function ManageDoctors() {
   };
 
   return (
+    // Outer wrapper with styling
     <div className="min-h-screen flex items-center justify-center px-2 sm:px-4 lg:px-6 py-12 rounded-bl-[50px] rounded-tl-[50px] bg-primary">
       <div className="card w-full max-w-4xl sm:max-w-5xl p-6 sm:p-8 text-primary">
+        {/* Page title */}
         <h2 className="text-xl sm:text-2xl font-bold mb-6">Manage Doctors</h2>
+
+        {/* Show messages */}
         {error && (
           <div className="mb-4 p-3 rounded bg-status-red text-white">{error}</div>
         )}
@@ -85,12 +106,14 @@ function ManageDoctors() {
           <div className="mb-4 p-3 rounded bg-status-green text-white">{success}</div>
         )}
 
+        {/* Add Doctor Form */}
         <div className="mb-8">
           <h3 className="text-lg sm:text-xl font-semibold mb-4">Add Doctor</h3>
           <form
             onSubmit={handleAddDoctor}
             className="p-4 sm:p-6 rounded-xl card flex flex-col gap-3"
           >
+            {/* Dynamically render input fields: name, email, phone, specialty */}
             {["name", "email", "phone", "specialty"].map((field) => (
               <div className="mb-2" key={field}>
                 <label className="block mb-1 capitalize text-primary text-left">
@@ -108,6 +131,8 @@ function ManageDoctors() {
                 />
               </div>
             ))}
+
+            {/* Submit button for adding doctor */}
             <button
               type="submit"
               className="w-full bg-accent text-white p-2 sm:p-3 rounded-lg transition-all duration-300 hover:bg-opacity-90"
@@ -117,12 +142,14 @@ function ManageDoctors() {
           </form>
         </div>
 
+        {/* Update Doctor Schedule Section */}
         <div>
           <h3 className="text-lg sm:text-xl font-semibold mb-4">Update Doctor Schedule</h3>
           <form
             onSubmit={handleUpdateSchedule}
             className="p-4 sm:p-6 rounded-xl card flex flex-col gap-3"
           >
+            {/* Dropdown to select a doctor */}
             <div className="mb-2">
               <label className="block mb-1 text-primary text-left">Doctor</label>
               <select
@@ -142,6 +169,7 @@ function ManageDoctors() {
               </select>
             </div>
 
+            {/* Render schedule slots */}
             {scheduleForm.schedule.map((slot, index) => (
               <div
                 key={index}
@@ -150,6 +178,7 @@ function ManageDoctors() {
                 <label className="block mb-1 text-primary text-left">
                   Schedule Slot {index + 1}
                 </label>
+                {/* Day input */}
                 <input
                   type="text"
                   placeholder="Day (e.g., Monday)"
@@ -161,6 +190,7 @@ function ManageDoctors() {
                   }}
                   className="w-full p-2 rounded bg-secondary border border-primary text-primary placeholder-text-secondary focus:outline-none focus:border-accent"
                 />
+                {/* Start Time input */}
                 <input
                   type="time"
                   value={slot.startTime}
@@ -171,6 +201,7 @@ function ManageDoctors() {
                   }}
                   className="w-full p-2 rounded bg-secondary border border-primary text-primary placeholder-text-secondary focus:outline-none focus:border-accent"
                 />
+                {/* End Time input */}
                 <input
                   type="time"
                   value={slot.endTime}
@@ -184,6 +215,7 @@ function ManageDoctors() {
               </div>
             ))}
 
+            {/* Add new schedule slot */}
             <button
               type="button"
               onClick={addScheduleSlot}
@@ -191,6 +223,7 @@ function ManageDoctors() {
             >
               Add Schedule Slot
             </button>
+            {/* Submit button for updating schedule */}
             <button
               type="submit"
               className="w-full bg-accent text-white p-2 sm:p-3 rounded-lg transition-all duration-300 hover:bg-opacity-90"
@@ -202,6 +235,6 @@ function ManageDoctors() {
       </div>
     </div>
   );
-}
+};
 
 export default ManageDoctors;
