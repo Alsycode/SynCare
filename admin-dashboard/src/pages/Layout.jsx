@@ -1,34 +1,82 @@
-import Sidebar from "./Sidebar"; // Import the Sidebar component
-import { Outlet } from "react-router-dom"; // Outlet renders the matched child routes
-import { useContext } from "react"; // React hook to consume context values
-import { ThemeContext } from "../context/ThemeContext"; // Import the custom ThemeContext
+import { Outlet } from "react-router-dom";
+import Sidebar from "./Sidebar";
+import { useContext, useState } from "react";
+import { ThemeContext } from "../context/ThemeContext";
+import { RiLogoutBoxFill } from "react-icons/ri";
+import { GiHamburgerMenu } from "react-icons/gi";
+import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
 
-// Layout component defines the main page structure (Sidebar + Main content)
 export const Layout = () => {
-  // Access the current theme value from ThemeContext
-  const { theme } = useContext(ThemeContext);
+  const { theme, toggleTheme } = useContext(ThemeContext);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    try {
+      toast.success("Logged out successfully");
+      localStorage.removeItem("token");
+      localStorage.removeItem("role");
+      localStorage.removeItem("userId");
+      navigate("/login");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Logout failed");
+    }
+  };
+
+  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   return (
-    // Main container with flex to arrange child elements side by side
-    // min-h-screen ensures it takes at least full screen height
-    // bg-primary applies the background color from Tailwind theme
-    <div className="flex min-h-screen bg-primary">
-      
-      {/* Sidebar: fixed positioning ensures it's always visible on the left */}
-      <div className="fixed top-0 left-0 h-full z-50">
-        {/* Sidebar component renders app navigation/menu */}
-        <Sidebar />
-      </div>
+    <div className="flex flex-col min-h-screen bg-primary">
+      {/* Header - Always Visible */}
+      <header className="fixed top-0 left-0 right-0 h-16 bg-black shadow-lg z-50 flex items-center justify-between px-4 md:px-6">
+        {/* Logo */}
+        <div className="flex items-center">
+          <img src="/logo1.png" alt="Logo" className="h-[150px] w-auto" />
+        </div>
 
-      {/* Main content area */}
-      {/* flex-1 allows this section to take up remaining space */}
-      {/* md:ml-[120px] adds left margin only on medium+ screens 
-          so content doesn’t overlap the Sidebar */}
-      {/* ml-0 removes margin on small screens (Sidebar may collapse there) */}
-      <div className="flex-1 md:ml-[120px] ml-0">
-        {/* Outlet renders the nested route content defined in react-router */}
+        {/* Right Side: Logout (md+) + Hamburger (mobile) */}
+        <div className="flex items-center gap-3">
+          {/* Logout Button - Hidden on mobile */}
+          <button
+            onClick={handleLogout}
+            className="hidden md:flex items-center gap-2 bg-secondary text-icon px-4 py-2 rounded-lg hover:bg-accent transition-colors"
+          >
+            <RiLogoutBoxFill className="w-5 h-5" />
+            <span className="font-medium">Logout</span>
+          </button>
+
+          {/* Hamburger - Only on mobile */}
+          <button
+            onClick={toggleSidebar}
+            className="md:hidden text-white bg-accent p-2 rounded-lg"
+          >
+            <GiHamburgerMenu className="w-6 h-6" />
+          </button>
+        </div>
+      </header>
+
+      {/* Sidebar */}
+      <Sidebar
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        toggleTheme={toggleTheme}
+        theme={theme}
+        handleLogout={handleLogout}
+      />
+
+      {/* Overlay for mobile */}
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
+      {/* Main Content */}
+      <main className="flex-1 mt-16 md:ml-[100px]">
         <Outlet />
-      </div>
+      </main>
     </div>
   );
 };

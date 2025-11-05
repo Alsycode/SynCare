@@ -5,6 +5,7 @@ const User = require('../models/User');
 // User Login Controller
 exports.login = async (req, res) => {
   const { email, password } = req.body;
+  console.log("body",body)
   try {
     const user = await User.findOne({ email });
     if (!user || !(await bcrypt.compare(password, user.password))) {

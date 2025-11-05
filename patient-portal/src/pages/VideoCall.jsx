@@ -4,59 +4,47 @@ import { useParams } from "react-router-dom";
 
 const socket = io("https://syncare.onrender.com/", { transports: ["websocket"] });
 
-function VideoCall() {
+const VideoCall = () => {
   const { roomId } = useParams();
-  const localVideoRef = useRef(null);
-  const remoteVideoRef = useRef(null);
+  const localVideoRef = useRef(null);   // HTMLVideoElement | null
+  const remoteVideoRef = useRef(null);  // HTMLVideoElement | null
   const peerConnectionRef = useRef(null);
   const localStreamRef = useRef(null);
-  const isEndingRef = useRef(false); // 🔹 Guard to prevent multiple endCall executions
+  const isEndingRef = useRef(false);
 
   const [isCalling, setIsCalling] = useState(false);
   const [incomingCall, setIncomingCall] = useState(null);
   const [error, setError] = useState("");
+  const [isMuted, setIsMuted] = useState(false);
+  const [volume, setVolume] = useState(1); // 0 .. 1
 
-  // --- WebRTC Initialization ---
+  // WebRTC initialization
   const initializeWebRTC = async () => {
     try {
-      // Close any old connection
+      // Close old connection
       if (peerConnectionRef.current) {
         peerConnectionRef.current.close();
         peerConnectionRef.current = null;
       }
 
-      // 🔹 Stop and clear old stream before requesting new
+      // Stop old stream
       if (localStreamRef.current) {
-        if (localVideoRef.current) {
-          localVideoRef.current.srcObject = null;
-        }
-        localStreamRef.current.getTracks().forEach(track => track.stop());
+        if (localVideoRef.current) localVideoRef.current.srcObject = null;
+        localStreamRef.current.getTracks().forEach(t => t.stop());
         localStreamRef.current = null;
-
-        // 🔹 Add delay to allow device full release
-        console.log("Stopping old stream... waiting 1s for device release.");
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(r => setTimeout(r, 1000));
       }
 
-      // Request new stream
-      console.log("Requesting new media stream...");
       const newStream = await navigator.mediaDevices.getUserMedia({
         video: true,
         audio: true,
       });
+
       localStreamRef.current = newStream;
 
-      // 🔹 Debug logs
-      const videoTrack = newStream.getVideoTracks()[0];
-      console.log("New stream acquired:", newStream);
-      console.log("Video track:", videoTrack);
-      console.log("Track readyState:", videoTrack?.readyState); // Should be 'live'
-      console.log("Track enabled:", videoTrack?.enabled); // Should be true
-      if (videoTrack?.readyState !== 'live') {
-        throw new Error("Video track is not live – check device release.");
-      }
+      // Attach to local video
+      if (localVideoRef.current) localVideoRef.current.srcObject = newStream;
 
-      // Create fresh peer connection
       peerConnectionRef.current = new RTCPeerConnection({
         iceServers: [
           { urls: "stun:stun.l.google.com:19302" },
@@ -64,127 +52,83 @@ function VideoCall() {
         ],
       });
 
-      // Attach local video
-      localVideoRef.current.srcObject = newStream;
-
-      // Add local tracks
       newStream.getTracks().forEach(track =>
         peerConnectionRef.current.addTrack(track, newStream)
       );
 
-      // ICE candidate handling
-      peerConnectionRef.current.onicecandidate = (event) => {
-        if (event.candidate) {
-          socket.emit("ice-candidate", { room: roomId, candidate: event.candidate });
+      peerConnectionRef.current.onicecandidate = e => {
+        if (e.candidate) {
+          socket.emit("ice-candidate", { room: roomId, candidate: e.candidate });
         }
       };
 
-      // Remote stream handling
-      peerConnectionRef.current.ontrack = (event) => {
-        remoteVideoRef.current.srcObject = event.streams[0];
+      peerConnectionRef.current.ontrack = e => {
+        if (remoteVideoRef.current) {
+          remoteVideoRef.current.srcObject = e.streams[0];
+          remoteVideoRef.current.volume = volume;
+        }
       };
 
-      console.log("WebRTC initialized successfully.");
       return true;
     } catch (err) {
-      console.error("Media error:", err);
-      setError("Could not access camera/microphone: " + err.message);
+      setError("Camera / Mic error: " + err.message);
       return false;
     }
   };
 
-  // --- Socket setup ---
+  // Socket listeners
   useEffect(() => {
     socket.emit("join", { userId: localStorage.getItem("userId"), room: roomId });
 
-    socket.on("connect", () => console.log("Socket.IO connected"));
-    socket.on("connect_error", (err) => {
-      console.error("Socket.IO connection error:", err);
-      setError("Failed to connect to server. Please check your network.");
-    });
+    socket.on("connect", () => console.log("Socket connected"));
+    socket.on("connect_error", () => setError("Server connection failed"));
 
-    socket.on("call-made", ({ offer }) => {
-      setIncomingCall(offer);
-    });
-
+    socket.on("call-made", ({ offer }) => setIncomingCall(offer));
     socket.on("call-answered", async ({ answer }) => {
-      try {
-        await peerConnectionRef.current?.setRemoteDescription(new RTCSessionDescription(answer));
-      } catch (err) {
-        console.error("Error setting remote answer:", err);
+      if (peerConnectionRef.current) {
+        await peerConnectionRef.current.setRemoteDescription(
+          new window.RTCSessionDescription(answer)
+        );
       }
     });
-
     socket.on("ice-candidate", async ({ candidate }) => {
-      try {
-        await peerConnectionRef.current?.addIceCandidate(new RTCIceCandidate(candidate));
-      } catch (err) {
-        console.error("Error adding ICE candidate:", err);
+      if (peerConnectionRef.current) {
+        await peerConnectionRef.current.addIceCandidate(
+          new window.RTCIceCandidate(candidate)
+        );
       }
     });
-
-    socket.on("call-ended", () => {
-      console.log("Received call-ended event from server.");
-      if (!isEndingRef.current) {
-        endCall();
-      }
-    });
+    socket.on("call-ended", () => !isEndingRef.current && endCall());
 
     return () => {
-      socket.off("connect");
-      socket.off("connect_error");
-      socket.off("call-made");
-      socket.off("call-answered");
-      socket.off("ice-candidate");
-      socket.off("call-ended");
-      // Only call endCall if a call is active
-      if (isCalling || incomingCall) {
-        console.log("Cleanup: Ending call due to unmount or roomId change.");
-        endCall();
-      }
+      socket.off();
+      if (isCalling || incomingCall) endCall();
     };
+    // eslint-disable-next-line
   }, [roomId]);
 
-  // --- Call controls ---
+  // Call helpers
   const startCall = async () => {
-    try {
-      if (!peerConnectionRef.current || peerConnectionRef.current.connectionState === "closed") {
-        const initialized = await initializeWebRTC();
-        if (!initialized) return;
-      }
-
-      setIsCalling(true);
-      const offer = await peerConnectionRef.current.createOffer();
-      await peerConnectionRef.current.setLocalDescription(offer);
-      socket.emit("call-user", { room: roomId, offer });
-    } catch (err) {
-      console.error("Error starting call:", err);
-      setError("Failed to start call.");
-      setIsCalling(false);
-    }
+    if (!peerConnectionRef.current) await initializeWebRTC();
+    setIsCalling(true);
+    const offer = await peerConnectionRef.current.createOffer();
+    await peerConnectionRef.current.setLocalDescription(offer);
+    socket.emit("call-user", { room: roomId, offer });
   };
 
   const acceptCall = async () => {
     if (!incomingCall) return;
+    if (!peerConnectionRef.current) await initializeWebRTC();
 
-    try {
-      if (!peerConnectionRef.current || peerConnectionRef.current.connectionState === "closed") {
-        const initialized = await initializeWebRTC();
-        if (!initialized) return;
-      }
+    await peerConnectionRef.current.setRemoteDescription(
+      new window.RTCSessionDescription(incomingCall)
+    );
+    const answer = await peerConnectionRef.current.createAnswer();
+    await peerConnectionRef.current.setLocalDescription(answer);
+    socket.emit("answer-call", { room: roomId, answer });
 
-      await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(incomingCall));
-      const answer = await peerConnectionRef.current.createAnswer();
-      await peerConnectionRef.current.setLocalDescription(answer);
-      socket.emit("answer-call", { room: roomId, answer });
-
-      setIncomingCall(null);
-      setIsCalling(true);
-    } catch (err) {
-      console.error("Error accepting call:", err);
-      setError("Failed to accept call.");
-      setIncomingCall(null);
-    }
+    setIncomingCall(null);
+    setIsCalling(true);
   };
 
   const rejectCall = () => {
@@ -193,68 +137,71 @@ function VideoCall() {
   };
 
   const endCall = () => {
-    if (isEndingRef.current) {
-      console.log("endCall already in progress, skipping.");
-      return;
-    }
+    if (isEndingRef.current) return;
     isEndingRef.current = true;
-    console.log("Ending call...");
 
     setIsCalling(false);
     setIncomingCall(null);
 
-    // Close peer connection
     if (peerConnectionRef.current) {
       peerConnectionRef.current.close();
       peerConnectionRef.current = null;
     }
 
-    // Clear video elements first to detach streams
     if (localVideoRef.current) localVideoRef.current.srcObject = null;
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
 
-    // Stop local stream tracks safely (after detaching)
     if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach(track => track.stop());
+      localStreamRef.current.getTracks().forEach(t => t.stop());
       localStreamRef.current = null;
     }
 
     socket.emit("end-call", { room: roomId });
-    console.log("Call ended – device should be released.");
 
-    // Reset guard after a short delay to allow event propagation
-    setTimeout(() => {
-      isEndingRef.current = false;
-    }, 1000);
+    setTimeout(() => (isEndingRef.current = false), 1000);
   };
 
-  // --- UI ---
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-4">
-      <div className="w-full max-w-4xl bg-white rounded-lg shadow-lg p-6 relative">
-        <h2 className="text-2xl font-bold mb-4 text-center">Video Call</h2>
+  // Mute / Volume helpers
+  const toggleMute = () => {
+    const audioTrack = localStreamRef.current?.getAudioTracks()[0];
+    if (audioTrack) {
+      audioTrack.enabled = !audioTrack.enabled;
+      setIsMuted(!audioTrack.enabled);
+    }
+  };
 
+  const handleVolumeChange = e => {
+    const vol = parseFloat(e.target.value);
+    setVolume(vol);
+    if (remoteVideoRef.current) remoteVideoRef.current.volume = vol;
+  };
+
+  // UI
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-primary text-primary p-4 transition-all duration-300">
+      <div className="w-full max-w-5xl bg-card rounded-xl shadow-card p-6 relative border border-primary transition-all duration-300">
+        {/* Error */}
         {error && (
-          <div className="mb-4 p-3 rounded bg-red-500/70 text-white text-center">{error}</div>
+          <div className="mb-4 p-3 rounded bg-status-red text-white text-center">
+            {error}
+          </div>
         )}
 
+        {/* Incoming call modal */}
         {incomingCall && !isCalling && (
-          <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
-            <div className="bg-white rounded-lg p-6 shadow-xl max-w-sm w-full">
-              <h3 className="text-xl font-bold text-blue-600 mb-4">Incoming Call</h3>
-              <p className="text-gray-700 mb-6">
-                You have an incoming video call. Accept to start the call.
-              </p>
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-card text-primary rounded-lg p-6 shadow-card max-w-sm w-full border border-primary">
+              <h3 className="text-xl font-bold text-status-blue mb-4">Incoming Call</h3>
               <div className="flex justify-center gap-4">
                 <button
                   onClick={acceptCall}
-                  className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600"
+                  className="bg-status-green text-white px-5 py-2 rounded-lg hover:bg-green-600"
                 >
                   Accept
                 </button>
                 <button
                   onClick={rejectCall}
-                  className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600"
+                  className="bg-status-red text-white px-5 py-2 rounded-lg hover:bg-red-600"
                 >
                   Reject
                 </button>
@@ -263,33 +210,42 @@ function VideoCall() {
           </div>
         )}
 
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1">
+        {/* Videos */}
+        <div className="relative flex flex-col md:flex-row gap-4">
+          {/* Remote (big) */}
+          <div className="flex-1 md:flex-[3] relative">
+            <video
+              ref={remoteVideoRef}
+              autoPlay
+              playsInline
+              className="w-full h-full rounded-lg border-2 border-primary object-cover bg-black"
+            />
+            <p className="absolute top-2 left-2 bg-black/50 text-white px-2 py-1 rounded text-sm">
+              Remote
+            </p>
+          </div>
+          {/* Local (small) */}
+          <div className="flex-1 md:flex-1 relative">
             <video
               ref={localVideoRef}
               autoPlay
               muted
               playsInline
-              className="w-full rounded-lg border-2 border-gray-300"
+              className="w-full rounded-lg border-2 border-primary object-cover bg-black"
             />
-            <p className="text-center mt-2">You</p>
-          </div>
-          <div className="flex-1">
-            <video
-              ref={remoteVideoRef}
-              autoPlay
-              playsInline
-              className="w-full rounded-lg border-2 border-gray-300"
-            />
-            <p className="text-center mt-2">Remote</p>
+            <p className="absolute top-2 left-2 bg-black/50 text-white px-2 py-1 rounded text-sm">
+              You
+            </p>
           </div>
         </div>
 
-        <div className="mt-6 flex justify-center gap-4">
+        {/* Control bar */}
+        <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-4 p-4 bg-secondary rounded-lg border border-primary transition-all duration-300">
+          {/* Start / End */}
           {!incomingCall && !isCalling && (
             <button
               onClick={startCall}
-              className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600"
+              className="bg-status-green text-white px-6 py-2 rounded-lg hover:bg-green-600"
             >
               Start Call
             </button>
@@ -297,15 +253,44 @@ function VideoCall() {
           {isCalling && (
             <button
               onClick={endCall}
-              className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600"
+              className="bg-status-red text-white px-6 py-2 rounded-lg hover:bg-red-600"
             >
               End Call
             </button>
+          )}
+
+          {/* Mute */}
+          {isCalling && (
+            <button
+              onClick={toggleMute}
+              className={`px-4 py-2 rounded-lg transition ${
+                isMuted ? "bg-orange-500 hover:bg-orange-600" : "bg-blue-500 hover:bg-blue-600"
+              } text-white`}
+            >
+              {isMuted ? "Unmute" : "Mute"}
+            </button>
+          )}
+
+          {/* Volume */}
+          {isCalling && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium">Volume</span>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.05"
+                value={volume}
+                onChange={handleVolumeChange}
+                className="w-32 accent-blue-600"
+              />
+              <span className="text-xs w-8 text-right">{Math.round(volume * 100)}%</span>
+            </div>
           )}
         </div>
       </div>
     </div>
   );
-}
+};
 
 export default VideoCall;

@@ -64,7 +64,7 @@ exports.getFeedbackByAppointment = async (req, res) => {
 // Get All Feedback for Admin without Aggregation
 exports.getAllFeedback = async (req, res) => {
   try {
-    console.log("arrived")
+  
  const feedbacks = await Feedback.find()
   .populate('patientId', 'name')
   .populate({
@@ -76,7 +76,7 @@ exports.getAllFeedback = async (req, res) => {
     },
   });
 
-console.log("feedbacksssssssssssssssssssss",feedbacks)
+
    const formattedFeedbacks = feedbacks.map(feedback => ({
   _id: feedback._id,
   patientId: feedback.patientId?._id || null,

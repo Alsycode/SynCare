@@ -171,9 +171,9 @@ const DoctorDashboard = () => {
     >
       <div className="card w-full max-w-7xl rounded-[50px] p-6 sm:p-8 text-primary shadow-card">
         {/* Page Title */}
-        <h2 className="text-2xl sm:text-3xl font-bold mb-6 text-center">
+        {/* <h2 className="text-2xl sm:text-3xl font-bold mb-6 text-center">
           Doctor Dashboard
-        </h2>
+        </h2> */}
 
         {/* Error message banner */}
         {error && (
@@ -458,7 +458,7 @@ const DoctorDashboard = () => {
         )}
 
         {/* Unread messages badge/display (dev status/debug) */}
-        <div className="text-primary mt-4">
+        {/* <div className="text-primary mt-4">
           {isLoading ? (
             <p className="text-secondary">Loading unread counts...</p>
           ) : unreadCounts && Object.keys(unreadCounts).length > 0 ? (
@@ -466,7 +466,7 @@ const DoctorDashboard = () => {
           ) : (
             <p className="text-secondary">No unread messages</p>
           )}
-        </div>
+        </div> */}
       </div>
     </div>
   );

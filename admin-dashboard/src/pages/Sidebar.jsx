@@ -13,186 +13,86 @@ import "react-toastify/dist/ReactToastify.css";
 import { ThemeContext } from "../context/ThemeContext";
 import { BiSolidUserDetail } from "react-icons/bi";
 
-const Sidebar = () => {
-  const [show, setShow] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(true);
+const Sidebar = ({ isOpen, onClose, toggleTheme, theme, handleLogout }) => {
+  const navigate = useNavigate();
   const role = localStorage.getItem("role");
-  const navigateTo = useNavigate();
-  const { theme, toggleTheme } = useContext(ThemeContext);
 
-  const gotoHomePage = () => {
-    navigateTo("/dashboard");
-    setShow(false);
-  };
-  const gotoDocHomePage = () => {
-    navigateTo("/doctor-dashboard");
-    setShow(false);
-  };
-  const gotoRegisterPatient = () => {
-    navigateTo("/register-patient");
-    setShow(false);
-  };
-  const gotoCreateAppointment = () => {
-    navigateTo("/create-appointment");
-    setShow(false);
-  };
-  const gotoManageDoctors = () => {
-    navigateTo("/manage-doctors");
-    setShow(false);
-  };
-  const gotoBloodBank = () => {
-    navigateTo("/blood-bank");
-    setShow(false);
-  };
-  const gotoAppointments = () => {
-    navigateTo("/appointments");
-    setShow(false);
-  };
-  const gotoFeedbacks = () => {
-    navigateTo("/feedback-analytics");
-    setShow(false);
-  };
-  const gotoPatientDatabase = () => {
-    navigateTo("/patient-database");
-    setShow(false);
-  };
-  const handleLogout = async () => {
-    try {
-      toast.success("Logged out successfully");
-      localStorage.removeItem("token");
-      localStorage.removeItem("role");
-      localStorage.removeItem("userId");
-      setIsAuthenticated(false);
-      navigateTo("/login");
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Logout failed");
-    }
+  const navItems = {
+    admin: [
+      { icon: TiHome, label: "Home", path: "/dashboard" },
+      { icon: IoPersonAddSharp, label: "Register Patient", path: "/register-patient" },
+      { icon: PiNotepadFill, label: "Create Appointment", path: "/create-appointment" },
+      { icon: FaUserDoctor, label: "Manage Doctors", path: "/manage-doctors" },
+      { icon: IoPersonAddSharp, label: "Blood Bank", path: "/blood-bank" },
+      { icon: PiNotepadFill, label: "Appointments", path: "/appointments" },
+      { icon: BiSolidUserDetail, label: "Patient DB", path: "/patient-database" },
+      { icon: GrAnalytics, label: "Feedback", path: "/feedback-analytics" },
+    ],
+    doctor: [
+      { icon: TiHome, label: "Home", path: "/doctor-dashboard" },
+    ],
   };
 
-  if (!isAuthenticated) {
-    return null;
-  }
+  const items = role === "admin" ? navItems.admin : navItems.doctor;
+
+  const handleNavigate = (path) => {
+    navigate(path);
+    onClose();
+  };
 
   return (
-    <div className="">
-      <nav
-        className={`fixed top-0 left-0 h-full w-[100px] bg-sidebar flex flex-col justify-center items-center py-6 transition-transform duration-300 transform ${
-          show ? "translate-x-0" : "-translate-x-full"
-        } md:translate-x-0 z-50`}
+    <>
+      {/* Desktop & Mobile Sidebar with Right Shadow */}
+      <aside
+        className={`
+          fixed left-0 top-16 bottom-0 w-[100px] bg-sidebar 
+          flex flex-col items-center py-6 space-y-6 
+          transition-transform duration-300 z-50
+          md:translate-x-0 
+          ${isOpen ? "translate-x-0" : "-translate-x-full"}
+          shadow-2xl shadow-gray-900/50  /* Strong right shadow */
+          md:shadow-xl md:shadow-gray-800/40  /* Softer on desktop */
+        `}
+        style={{
+          boxShadow: "8px 0 25px -5px rgba(0, 0, 0, 0.4)", /* Custom right shadow */
+        }}
       >
-        <div className="mb-6">
-          <img src="/logo1.png" className="w-20 h-auto" alt="Logo" />
+        {/* Navigation Icons */}
+        <div className="flex flex-col gap-4">
+          {items.map((item, idx) => (
+            <div
+              key={idx}
+              className="bg-secondary rounded-full p-2 shadow-card hover:bg-accent transition-colors cursor-pointer"
+              onClick={() => handleNavigate(item.path)}
+              title={item.label}
+            >
+              <item.icon className="w-6 h-6 text-icon" />
+            </div>
+          ))}
+
+          {/* Theme Toggle */}
+          <div
+            className="bg-secondary rounded-full p-2 shadow-card hover:bg-accent transition-colors cursor-pointer"
+            onClick={toggleTheme}
+          >
+            {theme === "dark" ? (
+              <MdLightMode className="w-6 h-6 text-icon" />
+            ) : (
+              <MdDarkMode className="w-6 h-6 text-icon" />
+            )}
+          </div>
+
+          {/* Logout - Only in sidebar on mobile */}
+          <div
+            className="bg-secondary rounded-full p-2 shadow-card hover:bg-red-600 transition-colors cursor-pointer md:hidden"
+            onClick={handleLogout}
+          >
+            <RiLogoutBoxFill className="w-6 h-6 text-icon" />
+          </div>
         </div>
-        {role === "admin" && (
-          <div className="flex flex-col gap-4">
-            <div className="bg-secondary rounded-full flex justify-center items-center h-8 w-8 shadow-card">
-              <TiHome
-                className="w-5 h-5 text-icon hover:bg-accent hover:rounded-lg hover:transition-colors hover:duration-300 hover:cursor-pointer"
-                onClick={gotoHomePage}
-              />
-            </div>
-            <div className="bg-secondary rounded-full flex justify-center items-center h-8 w-8 shadow-card">
-              <IoPersonAddSharp
-                className="w-5 h-5 text-icon hover:bg-accent hover:rounded-lg hover:transition-colors hover:duration-300 hover:cursor-pointer"
-                onClick={gotoRegisterPatient}
-              />
-            </div>
-            <div className="bg-secondary rounded-full flex justify-center items-center h-8 w-8 shadow-card">
-              <PiNotepadFill
-                className="w-5 h-5 text-icon hover:bg-accent hover:rounded-lg hover:transition-colors hover:duration-300 hover:cursor-pointer"
-                onClick={gotoCreateAppointment}
-              />
-            </div>
-            <div className="bg-secondary rounded-full flex justify-center items-center h-8 w-8 shadow-card">
-              <FaUserDoctor
-                className="w-5 h-5 text-icon hover:bg-accent hover:rounded-lg hover:transition-colors hover:duration-300 hover:cursor-pointer"
-                onClick={gotoManageDoctors}
-              />
-            </div>
-            <div className="bg-secondary rounded-full flex justify-center items-center h-8 w-8 shadow-card">
-              <IoPersonAddSharp
-                className="w-5 h-5 text-icon hover:bg-accent hover:rounded-lg hover:transition-colors hover:duration-300 hover:cursor-pointer"
-                onClick={gotoBloodBank}
-              />
-            </div>
-            <div className="bg-secondary rounded-full flex justify-center items-center h-8 w-8 shadow-card">
-              <PiNotepadFill
-                className="w-5 h-5 text-icon hover:bg-accent hover:rounded-lg hover:transition-colors hover:duration-300 hover:cursor-pointer"
-                onClick={gotoAppointments}
-              />
-            </div>
-            <div className="bg-secondary rounded-full flex justify-center items-center h-8 w-8 shadow-card">
-              <BiSolidUserDetail
-                className="w-5 h-5 text-icon hover:bg-accent hover:rounded-lg hover:transition-colors hover:duration-300 hover:cursor-pointer"
-                onClick={gotoPatientDatabase}
-              />
-            </div>
-            <div className="bg-secondary rounded-full flex justify-center items-center h-8 w-8 shadow-card">
-              <GrAnalytics
-                className="w-5 h-5 text-icon hover:bg-accent hover:rounded-lg hover:transition-colors hover:duration-300 hover:cursor-pointer"
-                onClick={gotoFeedbacks}
-              />
-            </div>
-            <div className="bg-secondary rounded-full flex justify-center items-center h-8 w-8 shadow-card">
-              {theme === "dark" ? (
-                <MdLightMode
-                  className="w-5 h-5 text-icon hover:bg-accent hover:rounded-lg hover:transition-colors hover:duration-300 hover:cursor-pointer"
-                  onClick={toggleTheme}
-                />
-              ) : (
-                <MdDarkMode
-                  className="w-5 h-5 text-icon hover:bg-accent hover:rounded-lg hover:transition-colors hover:duration-300 hover:cursor-pointer"
-                  onClick={toggleTheme}
-                />
-              )}
-            </div>
-            <div className="bg-secondary rounded-full flex justify-center items-center h-8 w-8 shadow-card">
-              <RiLogoutBoxFill
-                className="w-5 h-5 text-icon hover:bg-accent hover:rounded-lg hover:transition-colors hover:duration-300 hover:cursor-pointer"
-                onClick={handleLogout}
-              />
-            </div>
-          </div>
-        )}
-        {role === "doctor" && (
-          <div className="flex flex-col gap-4">
-            <div className="bg-secondary rounded-full flex justify-center items-center h-8 w-8 shadow-card">
-              <TiHome
-                className="w-5 h-5 text-icon hover:bg-accent hover:rounded-lg hover:transition-colors hover:duration-300 hover:cursor-pointer"
-                onClick={gotoDocHomePage}
-              />
-            </div>
-            <div className="bg-secondary rounded-full flex justify-center items-center h-8 w-8 shadow-card">
-              {theme === "dark" ? (
-                <MdLightMode
-                  className="w-5 h-5 text-icon hover:bg-accent hover:rounded-lg hover:transition-colors hover:duration-300 hover:cursor-pointer"
-                  onClick={toggleTheme}
-                />
-              ) : (
-                <MdDarkMode
-                  className="w-5 h-5 text-icon hover:bg-accent hover:rounded-lg hover:transition-colors hover:duration-300 hover:cursor-pointer"
-                  onClick={toggleTheme}
-                />
-              )}
-            </div>
-            <div className="bg-secondary rounded-full flex justify-center items-center h-8 w-8 shadow-card">
-              <RiLogoutBoxFill
-                className="w-5 h-5 text-icon hover:bg-accent hover:rounded-lg hover:transition-colors hover:duration-300 hover:cursor-pointer"
-                onClick={handleLogout}
-              />
-            </div>
-          </div>
-        )}
-      </nav>
-      <div
-        onClick={() => setShow(!show)}
-        className="md:hidden fixed top-4 left-4 text-2xl bg-accent text-white h-10 w-10 rounded-lg flex justify-center items-center z-50 cursor-pointer"
-      >
-        <GiHamburgerMenu />
-      </div>
-    </div>
+      </aside>
+    </>
   );
 };
 
-
-export default Sidebar
+export default Sidebar;

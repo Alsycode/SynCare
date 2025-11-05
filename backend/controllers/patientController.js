@@ -30,15 +30,15 @@ exports.registerPatient = async (req, res) => {
     });
     await user.save();
 
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: 'Your Patient Portal Account',
-      html: `Welcome, ${name}! Your SynCare account has been created.<br>
-             Username: ${email}<br>
-             Temporary Password: ${tempPassword}<br>
-             <a href="http://localhost:3000/login">Activate Account</a>`,
-    });
+    // await transporter.sendMail({
+    //   from: process.env.EMAIL_USER,
+    //   to: email,
+    //   subject: 'Your Patient Portal Account',
+    //   html: `Welcome, ${name}! Your SynCare account has been created.<br>
+    //          Username: ${email}<br>
+    //          Temporary Password: ${tempPassword}<br>
+    //          <a href="http://localhost:3000/login">Activate Account</a>`,
+    // });
 
     res.status(201).json({ message: 'Patient registered successfully' });
   } catch (error) {

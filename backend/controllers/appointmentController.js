@@ -97,7 +97,7 @@ exports.completeAppointment = async (req, res) => {
     if (!appointment) {
       return res.status(404).json({ error: "Appointment not found or not authorized" });
     }
-
+console.log("appointmnt",req.body)
     appointment.status = "completed";
     appointment.doctorNotes = doctorNotes || appointment.doctorNotes;
     appointment.diagnosis = diagnosis || appointment.diagnosis;
@@ -145,12 +145,12 @@ console.log("no instructions")
       },
       process.env.JWT_SECRET
     );
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to: patient.email,
-      subject: "Appointment Completed - Share Feedback",
-      html: `Dear ${patient.name},<br>Your appointment on ${appointment.date.toLocaleDateString()} at ${appointment.time} is complete. Please provide feedback: <a href="http://localhost:5174/feedback/${appointment._id}?token=${token}">Feedback Form</a>`,
-    });
+    // await transporter.sendMail({
+    //   from: process.env.EMAIL_USER,
+    //   to: patient.email,
+    //   subject: "Appointment Completed - Share Feedback",
+    //   html: `Dear ${patient.name},<br>Your appointment on ${appointment.date.toLocaleDateString()} at ${appointment.time} is complete. Please provide feedback: <a href="http://localhost:5174/feedback/${appointment._id}?token=${token}">Feedback Form</a>`,
+    // });
 
     res.json({ message: "Appointment completed", appointment });
   } catch (error) {
