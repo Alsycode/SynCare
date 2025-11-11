@@ -8,19 +8,24 @@ function Payment() {
   const navigate = useNavigate();
   const [error, setError] = useState('');
 
+  // ✅ Use environment variable for backend URL
+  const backendUrl = import.meta.env.VITE_BACKEND_URL;
+
   useEffect(() => {
     loadRazorpay('https://checkout.razorpay.com/v1/checkout.js');
   }, []);
 
   const handlePayment = async () => {
     try {
+      // ✅ Payment initiation
       const res = await axios.post(
-        'http://localhost:5000/api/payments/create',
-        { appointmentId, amount: 10 }, // Example amount
+        `${backendUrl}/api/payments/create`,
+        { appointmentId, amount: 100 }, // Example amount
         { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
       );
+
       const { orderId, amount, currency } = res.data;
-const keyId = import.meta.env.VITE_RAZORPAY_KEY_ID; // ✅ Correct for Vite
+      const keyId = import.meta.env.VITE_RAZORPAY_KEY_ID; // ✅ Razorpay key from env
 
       const options = {
         key: keyId,
@@ -29,8 +34,9 @@ const keyId = import.meta.env.VITE_RAZORPAY_KEY_ID; // ✅ Correct for Vite
         order_id: orderId,
         handler: async (response) => {
           try {
+            // ✅ Payment verification
             await axios.post(
-              'http://localhost:5000/api/payments/verify',
+              `${backendUrl}/api/payments/verify`,
               {
                 appointmentId,
                 paymentId: response.razorpay_payment_id,
@@ -49,6 +55,7 @@ const keyId = import.meta.env.VITE_RAZORPAY_KEY_ID; // ✅ Correct for Vite
           contact: '1234567890',
         },
       };
+
       const rzp = new window.Razorpay(options);
       rzp.open();
     } catch (err) {

@@ -5,7 +5,8 @@ import { ThemeContext } from "../context/ThemeContext";
 import { fetchData } from "../axiosInstance/index";
 
 // Socket connection to the server
-const socket = io("https://syncare.onrender.com/", { withCredentials: true });
+const socket = io(import.meta.env.VITE_SOCKET_URL, { withCredentials: true });
+
 
 /**
  * Chat component allows doctors to communicate with patients through real-time messaging.

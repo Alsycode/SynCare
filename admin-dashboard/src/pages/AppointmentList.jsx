@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useMemo } from "react";
 import { fetchData } from "../axiosInstance/index";
 import { ThemeContext } from "../context/ThemeContext";
 
@@ -32,22 +32,27 @@ const AppointmentsList = () => {
     fetchAppointments();
   }, []);
 
-  const filteredAppointments = appointments.filter((appointment) => {
-    const matchesStatus = !filters.status || appointment.status === filters.status;
-    const matchesPaymentStatus = !filters.paymentStatus || appointment.paymentStatus === filters.paymentStatus;
-    const appointmentDate = new Date(appointment.date);
-    const matchesDateRange =
-      (!filters.startDate || appointmentDate >= new Date(filters.startDate)) &&
-      (!filters.endDate || appointmentDate <= new Date(filters.endDate));
+  const filteredAppointments = useMemo(() => {
+    return appointments.filter((appointment) => {
+      const matchesStatus = !filters.status || appointment.status === filters.status;
+      const matchesPaymentStatus = !filters.paymentStatus || appointment.paymentStatus === filters.paymentStatus;
+      const appointmentDate = new Date(appointment.date);
+      const matchesDateRange =
+        (!filters.startDate || appointmentDate >= new Date(filters.startDate)) &&
+        (!filters.endDate || appointmentDate <= new Date(filters.endDate));
 
-    return matchesStatus && matchesPaymentStatus && matchesDateRange;
-  });
+      return matchesStatus && matchesPaymentStatus && matchesDateRange;
+    });
+  }, [appointments, filters]);
 
-  const totalPages = Math.ceil(filteredAppointments.length / pageSize);
-  const paginatedAppointments = filteredAppointments.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
-  );
+  const totalPages = useMemo(() => Math.ceil(filteredAppointments.length / pageSize), [filteredAppointments.length]);
+  
+  const paginatedAppointments = useMemo(() => {
+    return filteredAppointments.slice(
+      (currentPage - 1) * pageSize,
+      currentPage * pageSize
+    );
+  }, [filteredAppointments, currentPage]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -86,6 +91,21 @@ const AppointmentsList = () => {
       <div className="min-h-screen flex items-center justify-center px-2 sm:px-4 lg:px-6 py-8 bg-primary">
         <div className="card w-full max-w-md sm:max-w-2xl md:max-w-4xl p-4 sm:p-6 lg:p-8 text-primary">
           {/* Skeleton content */}
+          <table className="min-w-full text-primary text-xs sm:text-sm lg:text-base">
+            <thead>
+              <tr className="bg-secondary">
+                <th className="p-2 sm:p-3 text-center">Patient</th>
+                <th className="p-2 sm:p-3 text-center">Doctor</th>
+                <th className="p-2 sm:p-3 text-center">Date</th>
+                <th className="p-2 sm:p-3 text-center">Time</th>
+                <th className="p-2 sm:p-3 text-center">Status</th>
+                <th className="p-2 sm:p-3 text-center">Payment</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Array(5).fill().map((_, i) => <SkeletonRow key={i} />)}
+            </tbody>
+          </table>
         </div>
       </div>
     );
@@ -199,7 +219,9 @@ const AppointmentsList = () => {
               ))}
               {filteredAppointments.length === 0 && (
                 <tr>
-                  <td colSpan="6" className="text-center p-2 sm:p-4 text-secondary">No appointments found</td>
+                  <td colSpan="6" className="text-center p-2 sm:p-4 text-secondary">
+                    No appointments found
+                  </td>
                 </tr>
               )}
             </tbody>
