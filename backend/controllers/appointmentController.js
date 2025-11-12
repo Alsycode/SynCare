@@ -119,6 +119,7 @@ console.log("saved appointment")
 console.log("no instructions")
     // Update MedicalHistory
     let medicalHistory = await MedicalHistory.findOne({ patientId: appointment.patientId });
+    console.log("history found")
     if (!medicalHistory) {
       medicalHistory = await MedicalHistory.create({ patientId: appointment.patientId, entries: [] });
     }
@@ -134,7 +135,7 @@ console.log("no instructions")
       { $push: { entries: { $each: entries } } },
       { upsert: true, new: true }
     );
-
+console.log("medicak history updated")
     // Feedback email logic
     const patient = await User.findById(appointment.patientId);
     const token = jwt.sign(
@@ -145,13 +146,14 @@ console.log("no instructions")
       },
       process.env.JWT_SECRET
     );
+    console.log("Feedback email")
      await transporter.sendMail({
        from: process.env.EMAIL_USER,
        to: patient.email,
        subject: "Appointment Completed - Share Feedback",
-       html: `Dear ${patient.name},<br>Your appointment on ${appointment.date.toLocaleDateString()} at ${appointment.time} is complete. Please provide feedback: <a href="https://caresync-patient-portal.vercel.app/feedback/${appointment._id}?token=${token}">Feedback Form</a>`,
+       html: `Dear ${patient.name},<br>Your appointment on ${appointment.date.toLocaleDateString()} at ${appointment.time} is complete. Please provide feedback: <a href="http://localhost:5174/feedback/${appointment._id}?token=${token}">Feedback Form</a>`,
      });
-
+console.log("Feedback email sent")
     res.json({ message: "Appointment completed", appointment });
   } catch (error) {
     res.status(500).json({ error: "Server error" });
@@ -171,34 +173,35 @@ exports.getPatientAppointments = async (req, res) => {
   }
 };
 
-exports.getAllAppointmentsAdmin = async (req, res) => {
-  try {
-    const appointments = await Appointment.find()
-      .populate('patientId', 'name email')
-      .populate('doctorId', 'name email')
-      .sort({ date: -1 });
-    const appointmentsWithFeedback = await Promise.all(appointments.map(async (apt) => {
-      const feedback = await Feedback.findOne({ appointmentId: apt._id })
-        .select('rating comments submittedAt')
-        .lean(); 
-      return { ...apt.toObject(), feedback };
-    }));
+// exports.getAllAppointmentsAdmin = async (req, res) => {
+//   try {
+//     const appointments = await Appointment.find()
+//       .populate('patientId', 'name email')
+//       .populate('doctorId', 'name email')
+//       .sort({ date: -1 });
+//     const appointmentsWithFeedback = await Promise.all(appointments.map(async (apt) => {
+//       const feedback = await Feedback.findOne({ appointmentId: apt._id })
+//         .select('rating comments submittedAt')
+//         .lean(); 
+//       return { ...apt.toObject(), feedback };
+//     }));
 
-    res.status(200).json({
-      success: true,
-      data: appointmentsWithFeedback
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching all appointments',
-      error: error.message
-    });
-  }
-};
+//     res.status(200).json({
+//       success: true,
+//       data: appointmentsWithFeedback
+//     });
+//   } catch (error) {
+//     res.status(500).json({
+//       success: false,
+//       message: 'Error fetching all appointments',
+//       error: error.message
+//     });
+//   }
+// };
 
 // Validate appointment token
 exports.validateAppointmentToken = async (req, res) => {
+   console.log("paramsssssssss")
   const { appointmentId } = req.params;
   console.log("params",appointmentId)
   const token = req.headers.authorization?.split(' ')[1];
@@ -207,9 +210,10 @@ exports.validateAppointmentToken = async (req, res) => {
     if (!appointment || appointment.status !== 'completed') {
       return res.status(400).json({ valid: false, error: 'Invalid appointment' });
     }
-    
+    console.log("appointment",appointment)
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
- const isValid = appointment.patientId.equals(decoded.id);
+const isValid = appointment.patientId && appointment.patientId.toString() === decoded.id;
+
       console.log("decoded",decoded)
     console.log("decoded patientid",appointment.patientId)
         console.log("isValid",isValid)

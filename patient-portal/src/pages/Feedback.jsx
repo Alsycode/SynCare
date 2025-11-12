@@ -3,6 +3,8 @@ import { useParams } from "react-router-dom";
 import { useSearchParams } from "react-router-dom";
 import { fetchData } from "../axiosInstance/index"; // Import your custom axios instance
 
+const BASE_URL = import.meta.env.VITE_API_BASE_URL; // Add your base URL here
+
 function FeedbackForm() {
   const { appointmentId } = useParams();
   const [formData, setFormData] = useState({ rating: 5, comments: "" });
@@ -20,9 +22,10 @@ function FeedbackForm() {
 
     // Validate token with backend (simplified check)
     fetchData(`/api/appointments/validate/${appointmentId}`, {
-  method: "GET",
-  headers: { Authorization: `Bearer ${token}` }
-}).then((res) => {
+      method: "GET",
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => {
         if (res.valid) setIsValid(true);
         else setError("Invalid or expired feedback link");
       })
@@ -36,21 +39,27 @@ function FeedbackForm() {
       return;
     }
     try {
-     await fetchData('/api/feedback', {
-  method: "POST",
-  headers: { Authorization: `Bearer ${token}` },
-  data: {
-    appointmentId,
-    rating: formData.rating,
-    comments: formData.comments,
-  }
-});
+      await fetchData(`${BASE_URL}/api/feedback`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        data: {
+          appointmentId,
+          rating: formData.rating,
+          comments: formData.comments,
+        },
+      });
       setSuccess("Feedback submitted successfully!");
       setError("");
       setFormData({ rating: 5, comments: "" });
     } catch (err) {
-      setError("Failed to submit feedback");
-      setSuccess("");
+      
+const message =
+      err.response?.data?.error ||
+      err.response?.data?.message ||
+      err.message ||
+      "Failed to submit feedback";
+    setError(message);
+    setSuccess("");
     }
   };
 
