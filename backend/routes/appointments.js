@@ -22,7 +22,7 @@ router.get('/patient', auth, controller.getPatientAppointments);
 router.get('/patientAppointments', auth, controller.getPatientAppointments);
 
 // Admin Get All Appointments
-// router.get('/admin/all', auth, isAdmin, controller.getAllAppointmentsAdmin);
+ router.get('/admin/all', auth, isAdmin, controller.getAllAppointmentsAdmin);
 
 // Validate Appointment Token
 router.get('/validate/:appointmentId', controller.validateAppointmentToken);
