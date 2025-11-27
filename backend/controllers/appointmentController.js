@@ -173,31 +173,36 @@ exports.getPatientAppointments = async (req, res) => {
   }
 };
 
-// exports.getAllAppointmentsAdmin = async (req, res) => {
-//   try {
-//     const appointments = await Appointment.find()
-//       .populate('patientId', 'name email')
-//       .populate('doctorId', 'name email')
-//       .sort({ date: -1 });
-//     const appointmentsWithFeedback = await Promise.all(appointments.map(async (apt) => {
-//       const feedback = await Feedback.findOne({ appointmentId: apt._id })
-//         .select('rating comments submittedAt')
-//         .lean(); 
-//       return { ...apt.toObject(), feedback };
-//     }));
+exports.getAllAppointmentsAdmin = async (req, res) => {
+  try {
+    const appointments = await Appointment.find()
+      .populate('patientId', 'name email')
+      .populate('doctorId', 'name email')
+      .sort({ date: -1 });
 
-//     res.status(200).json({
-//       success: true,
-//       data: appointmentsWithFeedback
-//     });
-//   } catch (error) {
-//     res.status(500).json({
-//       success: false,
-//       message: 'Error fetching all appointments',
-//       error: error.message
-//     });
-//   }
-// };
+    const appointmentsWithFeedback = await Promise.all(
+      appointments.map(async (apt) => {
+        const feedback = await Feedback.findOne({ appointmentId: apt._id })
+          .select('rating comments submittedAt')
+          .lean();
+
+        return { ...apt.toObject(), feedback };
+      })
+    );
+
+    res.status(200).json({
+      success: true,
+      data: appointmentsWithFeedback
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching all appointments',
+      error: error.message
+    });
+  }
+};
+
 
 // Validate appointment token
 exports.validateAppointmentToken = async (req, res) => {
