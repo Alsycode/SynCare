@@ -36,7 +36,7 @@ const Login = ({ setToken }) => {
       }}
     >
       {/* Login Form Section */}
-    <div className="flex w-full md:w-1/2 items-center justify-center bg-black/50 px-6 py-12 min-h-screen md:min-h-0">
+      <div className="flex w-full md:w-1/2 items-center justify-center bg-black/50 px-6 py-12 min-h-screen md:min-h-0">
         <div className="w-full max-w-md bg-white/80 backdrop-blur-md rounded-3xl shadow-2xl p-6 sm:p-8">
           <h2 className="text-2xl sm:text-3xl font-bold mb-6 text-gray-800 text-center">
             Admin / Doctor Login
@@ -47,6 +47,24 @@ const Login = ({ setToken }) => {
               {error}
             </p>
           )}
+
+          {/* Demo Credentials for Recruiters */}
+          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+            <p className="text-sm font-semibold text-blue-800 mb-2 text-center">👨‍💼 Demo Login (for Recruiters)</p>
+            <div className="grid grid-cols-2 gap-2 text-xs text-gray-700">
+              <div>
+                <strong>Admin:</strong><br />
+                initial12.admin@example.com<br />
+              Admin123!
+              </div>
+              <div>
+                <strong>Doctor:</strong><br />
+               sasas@email.com<br />
+                fyzfe6rz
+              </div>
+            </div>
+            <p className="text-xs text-blue-600 mt-2 text-center italic">Click CV link → Instant demo access!</p>
+          </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
